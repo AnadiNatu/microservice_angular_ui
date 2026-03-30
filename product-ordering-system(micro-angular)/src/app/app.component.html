@@ -1,0 +1,11 @@
+<div class="app-container">
+  @if (loading) {
+    <div class="loading-overlay">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  }
+  
+  <router-outlet></router-outlet>
+</div>
