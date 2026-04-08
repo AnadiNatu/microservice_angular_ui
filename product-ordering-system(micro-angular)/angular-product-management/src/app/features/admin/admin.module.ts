@@ -38,43 +38,28 @@ const routes: Routes = [
   }
 ];
 
-/**
- * AdminModule - Admin feature module
- * Contains all admin-related components and functionality
- */
 @NgModule({
-  declarations: [
-    // Layout
+  imports: [
+    CommonModule,
+    SharedModule,
+    RouterModule.forChild(routes),
+
+    // ✅ VERY IMPORTANT: Import standalone components here
     AdminLayoutComponent,
-    
-    // Dashboard
     AdminDashboardComponent,
     HealthMonitorComponent,
-    
-    // Products
     ProductListComponent,
     CreateProductComponent,
     UpdateProductComponent,
-    
-    // Orders
     OrderListComponent,
     CreateOrderComponent,
     UpdateOrderComponent,
-    
-    // Users
     UserListComponent,
-    
-    // Logs
     OrderLogsByProductComponent,
     OrderLogsByUsersComponent
-  ],
-  imports: [
-    CommonModule,
-    SharedModule, // Provides forms, directives, pipes, and shared components
-    RouterModule.forChild(routes)
   ],
   providers: [
     AdminService
   ]
 })
-export class AdminModule { }
+export class AdminModule {}

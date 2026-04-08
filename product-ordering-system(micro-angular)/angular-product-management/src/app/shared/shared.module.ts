@@ -11,45 +11,38 @@ import { ProfileComponent } from "./components/profile/profile.component";
 import { LifecycleDemoComponent } from "./components/lifecycle-demo/lifecycle-demo.component";
 
 @NgModule({
-  declarations: [
-    // Components
-    HeaderComponent,
-    SidebarComponent,
-    CardComponent,
-    ProfileComponent,
-    LifecycleDemoComponent,
-    
-    // Directives
-    HighlightDirective,
-    
-    // Pipes
-    CustomCurrencyPipe
-  ],
   imports: [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    RouterModule
-  ],
-  exports: [
-    // Export common modules for convenience
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
     RouterModule,
-    
-    // Export all shared components
+
+    // ✅ IMPORT standalone components instead of declaring
     HeaderComponent,
     SidebarComponent,
     CardComponent,
     ProfileComponent,
     LifecycleDemoComponent,
-    
-    // Export directives
+
     HighlightDirective,
-    
-    // Export pipes
+    CustomCurrencyPipe
+  ],
+  exports: [
+    // Export Angular modules
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterModule,
+
+    // ✅ Export standalone imports
+    HeaderComponent,
+    SidebarComponent,
+    CardComponent,
+    ProfileComponent,
+    LifecycleDemoComponent,
+
+    HighlightDirective,
     CustomCurrencyPipe
   ]
 })
-export class SharedModule { }
+export class SharedModule {}

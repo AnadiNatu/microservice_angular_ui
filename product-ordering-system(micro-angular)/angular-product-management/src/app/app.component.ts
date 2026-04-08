@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, DoCheck } from "@angular/core";
-import { Router, NavigationStart, NavigationEnd, NavigationError } from "@angular/router";
+import { Router, NavigationStart, NavigationEnd, NavigationError, RouterModule } from "@angular/router";
 import { filter } from "rxjs";
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+   selector: 'app-root',
+  standalone: true,
+  imports: [RouterModule], // ✅ required for <router-outlet>
+  templateUrl: './app.component.html'
 })
 export class AppComponent implements OnInit, OnDestroy, AfterViewInit, DoCheck {
   title = 'OrderFlow Pro - Angular 17';

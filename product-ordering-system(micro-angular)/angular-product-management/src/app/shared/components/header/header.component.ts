@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { Router } from '@angular/router';
 
@@ -8,9 +8,9 @@ import { Router } from '@angular/router';
   styleUrls: ['./header.component.css'],
   standalone : true
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   
-  user = this.authService.userSignal;
+  user !: any;
 
   constructor(
     private authService: AuthService,
@@ -18,9 +18,11 @@ export class HeaderComponent {
   ) {
     console.log('HeaderComponent initialized, user:', this.user());
   }
-    user(): any {
-        throw new Error('Method not implemented.');
-    }
+
+  ngOnInit(): void {
+    this.user = this.authService.userSignal;
+    console.log("Header Component initialized , user:" , this.user())
+  }
 
   /**
    * Logout user and redirect to login

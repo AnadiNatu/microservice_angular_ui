@@ -7,7 +7,6 @@ import { StorageService } from './services/storage.service';
 
 
 @NgModule({
-  declarations: [],
   imports: [CommonModule],
   providers: [
     AuthService,
@@ -16,10 +15,6 @@ import { StorageService } from './services/storage.service';
   ]
 })
 export class CoreModule {
-  /**
-   * Prevent CoreModule from being imported multiple times
-   * This ensures singleton services remain singleton
-   */
   constructor(@Optional() @SkipSelf() parentModule: CoreModule) {
     if (parentModule) {
       throw new Error('CoreModule is already loaded. Import it in AppModule ONLY.');
