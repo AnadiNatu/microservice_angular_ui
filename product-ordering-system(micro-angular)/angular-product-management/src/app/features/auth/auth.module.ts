@@ -10,12 +10,12 @@ import { SignupComponent } from './components/signup/signup.component';
 
 
 const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
+  { path: 'home', component: HomePageComponent },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: SignupComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent },
-  { path: 'home', component: HomePageComponent }
+  { path: 'reset-password', component: ResetPasswordComponent }
 ];
 
 @NgModule({
@@ -23,13 +23,14 @@ const routes: Routes = [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-     LoginComponent,
+    RouterModule.forChild(routes),
+    
+    // Import standalone components
+    LoginComponent,
     SignupComponent,
     ForgotPasswordComponent,
     ResetPasswordComponent,
-    HomePageComponent,
-    RouterModule.forChild(routes)
+    HomePageComponent
   ]
 })
 export class AuthModule { }
-

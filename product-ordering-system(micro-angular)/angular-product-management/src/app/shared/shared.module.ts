@@ -9,7 +9,6 @@ import { HeaderComponent } from "./components/header/header.component";
 import { SidebarComponent } from "./components/sidebar/sidebar.component";
 import { ProfileComponent } from "./components/profile/profile.component";
 import { LifecycleDemoComponent } from "./components/lifecycle-demo/lifecycle-demo.component";
-
 @NgModule({
   imports: [
     CommonModule,
@@ -17,13 +16,12 @@ import { LifecycleDemoComponent } from "./components/lifecycle-demo/lifecycle-de
     ReactiveFormsModule,
     RouterModule,
 
-    // ✅ IMPORT standalone components instead of declaring
+    // ✅ Import standalone components
     HeaderComponent,
     SidebarComponent,
     CardComponent,
     ProfileComponent,
     LifecycleDemoComponent,
-
     HighlightDirective,
     CustomCurrencyPipe
   ],
@@ -34,13 +32,12 @@ import { LifecycleDemoComponent } from "./components/lifecycle-demo/lifecycle-de
     ReactiveFormsModule,
     RouterModule,
 
-    // ✅ Export standalone imports
+    // ✅ Export standalone components
     HeaderComponent,
     SidebarComponent,
     CardComponent,
     ProfileComponent,
     LifecycleDemoComponent,
-
     HighlightDirective,
     CustomCurrencyPipe
   ]

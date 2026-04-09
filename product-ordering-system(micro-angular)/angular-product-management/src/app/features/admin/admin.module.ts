@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
-import { AdminLayoutComponent } from './admin-layout/admn-layout.component';
 import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
 import { ProductListComponent } from './components/product-list/product-list.component';
 import { AdminService } from './services/admin.service';
@@ -15,6 +14,7 @@ import { UserListComponent } from './components/user-list/user-list.component';
 import { HealthMonitorComponent } from './components/health-monitor/health-monitor.component';
 import { OrderLogsByProductComponent } from './components/order-logs-by-product/order-logs-by-product.component';
 import { OrderLogsByUsersComponent } from './components/order-logs-by-users/order-logs-by-users.component';
+import { AdminLayoutComponent } from './admin-layout/admin-layout.component';
 
 const routes: Routes = [
   {
