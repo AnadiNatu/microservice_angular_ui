@@ -34,3 +34,4 @@ const routes: Routes = [
   ]
 })
 export class AuthModule { }
+// Main.ts does exist in my project please make the project work 
