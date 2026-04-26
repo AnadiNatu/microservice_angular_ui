@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, NavigationEnd, RouterLink } from '@angular/router';
+import { Router, NavigationEnd, RouterLink, RouterModule } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserRole } from '../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomCurrencyPipe } from '../../pipes/custom-currency.pipe';
-
+import { StorageService } from '../../../core/services/storage.service';
 interface MenuItem {
   label: string;
   icon: string;
@@ -18,12 +18,12 @@ interface MenuItem {
 @Component({
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
-  imports: [FormsModule , CommonModule , RouterLink],
   styleUrls: ['./sidebar.component.css'],
-  standalone: true
+  standalone: true,
+  imports: [CommonModule, RouterModule]
 })
 export class SidebarComponent implements OnInit {
- activeRoute: string = '';
+  activeRoute: string = '';
   menuItems: MenuItem[] = [];
 
   private allMenuItems: MenuItem[] = [
@@ -81,7 +81,8 @@ export class SidebarComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private storageService : StorageService
   ) {}
 
   ngOnInit(): void {
@@ -118,4 +119,9 @@ export class SidebarComponent implements OnInit {
   navigate(route: string): void {
     this.router.navigate([route]);
   }
+
+logout() : void{
+  this.storageService.logout();
+  this.router.navigateByUrl('/auth/login' , {replaceUrl : true}).then( () => {window.location.reload();});
+}
 }

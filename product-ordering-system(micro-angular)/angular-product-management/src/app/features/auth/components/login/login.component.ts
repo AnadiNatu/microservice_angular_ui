@@ -5,6 +5,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { LoginCredentials, UserRole } from '../../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
 import { CustomCurrencyPipe } from '../../../../shared/pipes/custom-currency.pipe';
+import { LoginRequest } from '../../../../core/modules/user.model';
 
 
 @Component({
@@ -15,238 +16,129 @@ import { CustomCurrencyPipe } from '../../../../shared/pipes/custom-currency.pip
   imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule , ReactiveFormsModule],
 })
 export class LoginComponent implements OnInit {
-  loginForm!: FormGroup;
-  isLoading: boolean = false;
-  errorMessage: string = '';
-  returnUrl: string = '';
-  showPassword: boolean = false;
-
-demoCredentials = {
+  
+  loginForm!  : FormGroup;
+  isLoading    = false;
+  errorMessage = '';
+  returnUrl    = '';
+  showPassword = false;
+ 
+  // Quick-fill demo buttons – backend credentials
+  demoCredentials = {
     admin: {
-      email: 'admin@system.com',
+      username: 'adminuser',
       password: 'admin123',
-      label: 'Admin Account',
-      icon: 'bi-shield-lock-fill',
-      color: 'danger'
+      label   : 'Admin Account',
+      icon    : 'bi-shield-lock-fill',
     },
     user: {
-      email: 'user@system.com',
-      password: 'user123',
-      label: 'User Account',
-      icon: 'bi-person-fill',
-      color: 'success'
+      username: 'testuser',
+      password: 'password123',
+      label   : 'User Account',
+      icon    : 'bi-person-fill',
     }
   };
-
+ 
   constructor(
-    private fb: FormBuilder,
+    private fb         : FormBuilder,
     private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute
+    private router     : Router,
+    private route      : ActivatedRoute
   ) {}
-
+ 
   ngOnInit(): void {
-    // Check if already logged in
     if (this.authService.isLoggedIn()) {
       this.redirectToDashboard();
       return;
     }
-
-    // Get return URL from route parameters or default to '/'
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
-
-    // Initialize login form with validators
-    this.initializeForm();
-
-    console.log('LoginComponent initialized');
-  }
-
-  /**
-   * Initialize reactive form
-   */
-  private initializeForm(): void {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      // Backend LoginRequest uses "username", not "email"
+      username  : ['', [Validators.required, Validators.minLength(3)]],
+      password  : ['', [Validators.required, Validators.minLength(6)]],
       rememberMe: [false]
     });
   }
-
-  /**
-   * Handle form submission
-   */
+ 
   onSubmit(): void {
-    // Mark all fields as touched to show validation errors
     if (this.loginForm.invalid) {
-      Object.keys(this.loginForm.controls).forEach(key => {
-        this.loginForm.get(key)?.markAsTouched();
-      });
+      Object.values(this.loginForm.controls).forEach(c => c.markAsTouched());
       return;
     }
-
-    // Get form values
-    const credentials: LoginCredentials = {
-      email: this.loginForm.value.email,
-      password: this.loginForm.value.password
+    const credentials: LoginRequest = {
+      username: this.loginForm.value.username.trim(),
+      password: this.loginForm.value.password,
     };
-
     this.performLogin(credentials);
   }
-
-  /**
-   * Perform login operation
-   */
-  private performLogin(credentials: LoginCredentials): void {
-    this.isLoading = true;
+ 
+  private performLogin(credentials: LoginRequest): void {
+    this.isLoading    = true;
     this.errorMessage = '';
-
+ 
     this.authService.login(credentials).subscribe({
-      next: (user) => {
-        console.log('Login successful:', user);
+      next: user => {
         this.isLoading = false;
-        
-        // Show success message
-        this.showSuccessMessage(user.fname);
-        
-        // Redirect based on role
-        setTimeout(() => {
-          this.redirectToDashboard();
-        }, 1000);
+        this.showToast(`Welcome back, ${user.username}!`, 'success');
+        setTimeout(() => this.redirectToDashboard(), 800);
       },
-      error: (error) => {
-        console.error('Login failed:', error);
-        this.isLoading = false;
-        this.errorMessage = error.message || 'Invalid email or password. Please try again.';
-        
-        // Shake animation for error
-        this.shakeForm();
+      error: err => {
+        this.isLoading    = false;
+        this.errorMessage = err.message ?? 'Invalid username or password.';
+        this.shakeCard();
       }
     });
   }
-
-  /**
-   * Quick login with demo credentials
-   */
+ 
   quickLogin(type: 'admin' | 'user'): void {
-    const credentials = this.demoCredentials[type];
-    
-    // Fill form
-    this.loginForm.patchValue({
-      email: credentials.email,
-      password: credentials.password
-    });
-
-    // Auto-submit after short delay
-    setTimeout(() => {
-      this.onSubmit();
-    }, 300);
+    const c = this.demoCredentials[type];
+    this.loginForm.patchValue({ username: c.username, password: c.password });
+    setTimeout(() => this.onSubmit(), 250);
   }
-
-  /**
-   * Redirect to appropriate dashboard based on user role
-   */
+ 
   private redirectToDashboard(): void {
-    const userRole = this.authService.getUserRole();
-    
-    // If there's a return URL and it's not the login page, use it
+    const role = this.authService.getUserRole();
     if (this.returnUrl && this.returnUrl !== '/' && !this.returnUrl.includes('login')) {
       this.router.navigateByUrl(this.returnUrl);
       return;
     }
-
-    // Otherwise, redirect based on role
-    if (userRole === UserRole.ADMIN) {
+    if (role === UserRole.ADMIN) {
       this.router.navigate(['/admin/dashboard']);
-    } else if (userRole === UserRole.USER) {
-      this.router.navigate(['/user/products']);
     } else {
-      this.router.navigate(['/']);
+      this.router.navigate(['/auth/home']);
     }
   }
-
-  /**
-   * Show success message
-   */
-  private showSuccessMessage(userName: string): void {
-    // Create temporary success element
-    const successDiv = document.createElement('div');
-    successDiv.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
-    successDiv.style.zIndex = '9999';
-    successDiv.innerHTML = `
-      <i class="bi bi-check-circle-fill me-2"></i>
-      Welcome back, ${userName}!
-    `;
-    document.body.appendChild(successDiv);
-
-    // Remove after 2 seconds
-    setTimeout(() => {
-      successDiv.remove();
-    }, 2000);
+ 
+  togglePasswordVisibility(): void { this.showPassword = !this.showPassword; }
+ 
+  hasError(field: string): boolean {
+    const c = this.loginForm.get(field);
+    return !!(c && c.invalid && c.touched);
   }
-
-  /**
-   * Shake form animation for error
-   */
-  private shakeForm(): void {
-    const formElement = document.querySelector('.login-card');
-    formElement?.classList.add('shake');
-    setTimeout(() => {
-      formElement?.classList.remove('shake');
-    }, 500);
-  }
-
-  /**
-   * Toggle password visibility
-   */
-  togglePasswordVisibility(): void {
-    this.showPassword = !this.showPassword;
-  }
-
-  /**
-   * Check if field has error
-   */
-  hasError(fieldName: string): boolean {
-    const field = this.loginForm.get(fieldName);
-    return !!(field && field.invalid && field.touched);
-  }
-
-  /**
-   * Get error message for field
-   */
-  getErrorMessage(fieldName: string): string {
-    const field = this.loginForm.get(fieldName);
-    
-    if (field?.hasError('required')) {
-      return `${fieldName === 'email' ? 'Email' : 'Password'} is required`;
-    }
-    if (field?.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-    if (field?.hasError('minlength')) {
-      return 'Password must be at least 6 characters';
-    }
-    
+ 
+  getErrorMessage(field: string): string {
+    const c = this.loginForm.get(field);
+    if (c?.hasError('required'))   return `${field === 'username' ? 'Username' : 'Password'} is required`;
+    if (c?.hasError('minlength'))  return `Minimum ${c.errors?.['minlength'].requiredLength} characters`;
     return '';
   }
-
-  /**
-   * Navigate to signup
-   */
-  goToSignup(): void {
-    this.router.navigate(['/auth/signup']);
+ 
+  goToSignup()         { this.router.navigate(['/auth/signup']); }
+  goToForgotPassword() { this.router.navigate(['/auth/forgot-password']); }
+  goToHome()           { this.router.navigate(['/']); }
+ 
+  private showToast(msg: string, type: 'success' | 'danger'): void {
+    const el = document.createElement('div');
+    el.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
+    el.style.zIndex = '9999';
+    el.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${msg}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
   }
-
-  /**
-   * Navigate to forgot password
-   */
-  goToForgotPassword(): void {
-    this.router.navigate(['/auth/forgot-password']);
-  }
-
-  /**
-   * Navigate to home
-   */
-  goToHome(): void {
-    this.router.navigate(['/']);
+ 
+  private shakeCard(): void {
+    const card = document.querySelector('.login-card');
+    card?.classList.add('shake');
+    setTimeout(() => card?.classList.remove('shake'), 500);
   }
 }  

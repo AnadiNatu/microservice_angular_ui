@@ -5,6 +5,7 @@ import { AdminService } from "../../services/admin.service";
 import { CommonModule } from "@angular/common";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
+import { getStockBadge } from "../../../../core/modules/product.model";
 
 @Component({
   selector: 'app-product-list',
@@ -14,147 +15,112 @@ import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pip
   imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule ,  ReactiveFormsModule],
 })
 export class ProductListComponent implements OnInit {
-  products: Product[] = [];
+   products        : Product[] = [];
   filteredProducts: Product[] = [];
-  searchTerm: string = '';
-  isLoading: boolean = true;
-
-  // Filter options
-  selectedCategory: string = 'all';
-  categories: string[] = ['all', 'Electronics', 'Accessories', 'Furniture', 'Clothing'];
-
+  searchTerm       = '';
+  selectedCategory = 'all';
+  isLoading        = true;
+  errorMsg         = '';
+ 
+  categories = ['all', 'Electronics', 'Accessories', 'Furniture', 'Clothing', 'Books', 'E2E'];
+ 
   constructor(
     private adminService: AdminService,
-    private router: Router
+    private router      : Router
   ) {}
-
-  ngOnInit(): void {
-    this.loadProducts();
-  }
-
-  /**
-   * Load all products
-   */
+ 
+  ngOnInit(): void { this.loadProducts(); }
+ 
   loadProducts(): void {
     this.isLoading = true;
+    this.errorMsg  = '';
+ 
     this.adminService.getAllProducts().subscribe({
-      next: (products) => {
-        this.products = products;
+      next: products => {
+        this.products         = products;
         this.filteredProducts = products;
-        this.isLoading = false;
-        console.log('Products loaded:', products.length);
+        this.isLoading        = false;
       },
-      error: (error) => {
-        console.error('Error loading products:', error);
+      error: err => {
+        this.errorMsg  = 'Failed to load products.';
         this.isLoading = false;
+        console.error('[ProductList]', err);
       }
     });
   }
-
-  /**
-   * Search products by name or description
-   */
+ 
+  // ── Filtering ─────────────────────────────────────────────
+ 
   searchProducts(): void {
     const term = this.searchTerm.toLowerCase().trim();
-    
-    this.filteredProducts = this.products.filter(product => {
-      const matchesSearch = 
-        product.productName.toLowerCase().includes(term) ||
-        product.productDesc.toLowerCase().includes(term);
-      
-      const matchesCategory = 
-        this.selectedCategory === 'all' || 
-        product.category === this.selectedCategory;
-      
-      return matchesSearch && matchesCategory;
+    this.filteredProducts = this.products.filter(p => {
+      const matchSearch =
+        p.productName.toLowerCase().includes(term) ||
+        (p.productDesc ?? '').toLowerCase().includes(term);
+      const matchCat =
+        this.selectedCategory === 'all' || p.category === this.selectedCategory;
+      return matchSearch && matchCat;
     });
-
-    console.log('Filtered products:', this.filteredProducts.length);
   }
-
-  /**
-   * Filter by category
-   */
-  filterByCategory(): void {
-    this.searchProducts(); // Reuse search logic
-  }
-
-  /**
-   * Clear all filters
-   */
+ 
+  filterByCategory(): void { this.searchProducts(); }
+ 
   clearFilters(): void {
-    this.searchTerm = '';
+    this.searchTerm       = '';
     this.selectedCategory = 'all';
     this.filteredProducts = this.products;
   }
-
+ 
+  // ── Actions ───────────────────────────────────────────────
+ 
   /**
-   * Navigate to update product
+   * Navigate to update page by productId.
+   * Route: /admin/update-product/:id
    */
-  updateProduct(productName: string): void {
-    this.router.navigate(['/admin/update-product', productName]);
+  updateProduct(productId: number): void {
+    this.router.navigate(['/admin/update-product', productId]);
   }
-
+ 
   /**
-   * Delete product with confirmation
+   * Deactivate product (backend has no hard-delete; soft-deactivate instead).
+   * Calls PUT /api/products/{id}/deactivate
    */
-  deleteProduct(product: Product): void {
-    const confirmMessage = `Are you sure you want to delete "${product.productName}"?\n\nThis action cannot be undone.`;
-    
-    if (confirm(confirmMessage)) {
-      this.adminService.deleteProduct(product.productName).subscribe({
-        next: () => {
-          console.log('Product deleted:', product.productName);
-          this.loadProducts(); // Reload list
-          this.showSuccessMessage('Product deleted successfully');
-        },
-        error: (error) => {
-          console.error('Error deleting product:', error);
-          alert('Failed to delete product. Please try again.');
-        }
-      });
-    }
+  deactivateProduct(product: Product): void {
+    const msg =
+      `Deactivate "${product.productName}"?\n\nThe product will be hidden from users.`;
+    if (!confirm(msg)) return;
+ 
+    this.adminService.deactivateProduct(product.productId).subscribe({
+      next: () => {
+        this.showToast('Product deactivated successfully');
+        this.loadProducts();
+      },
+      error: err => {
+        alert('Failed to deactivate product: ' + (err?.error?.message ?? err.message));
+      }
+    });
   }
-
-  /**
-   * Navigate to create product
-   */
+ 
   createNewProduct(): void {
     this.router.navigate(['/admin/create-product']);
   }
-
-  /**
-   * Get stock level badge
-   */
-  getStockBadge(inventory: number): { label: string; class: string } {
-    if (inventory === 0) {
-      return { label: 'Out of Stock', class: 'bg-danger' };
-    } else if (inventory < 20) {
-      return { label: 'Critical', class: 'bg-warning text-dark' };
-    } else if (inventory < 50) {
-      return { label: 'Low Stock', class: 'bg-info' };
-    } else {
-      return { label: 'In Stock', class: 'bg-success' };
-    }
-  }
-
-  /**
-   * Show success message
-   */
-  private showSuccessMessage(message: string): void {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
-    alertDiv.style.zIndex = '9999';
-    alertDiv.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${message}`;
-    document.body.appendChild(alertDiv);
-
-    setTimeout(() => alertDiv.remove(), 3000);
-  }
-
-  /**
-   * Navigate back to dashboard
-   */
+ 
   goBack(): void {
     this.router.navigate(['/admin/dashboard']);
+  }
+ 
+  // ── UI helpers ────────────────────────────────────────────
+ 
+  // Backend field: stockQuantity  (was productInventory)
+  getStockBadge = getStockBadge;
+ 
+  private showToast(msg: string): void {
+    const el = document.createElement('div');
+    el.className =
+      'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+    el.style.zIndex = '9999';
+    el.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${msg}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
   }
 }

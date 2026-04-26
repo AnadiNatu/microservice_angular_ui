@@ -5,6 +5,7 @@ import { Product, UpdateProductDTO } from "../../../../core/models/product.model
 import { AdminService } from "../../services/admin.service";
 import { CommonModule } from "@angular/common";
 import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
+import { ProductService } from "../../../../core/services/product.service";
 
 @Component({
   selector: 'app-update-product',
@@ -14,140 +15,164 @@ import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pip
   imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule , ReactiveFormsModule],
 })
 export class UpdateProductComponent implements OnInit {
-  productForm!: FormGroup;
-  productData!: Product;
-  isLoading: boolean = true;
-  isSubmitting: boolean = false;
-  productName: string = '';
-
+  
+  productForm !: FormGroup;
+  productData !: Product;
+  isLoading    = true;
+  isSubmitting = false;
+  errorMsg     = '';
+  successMsg   = '';
+ 
+  // Image
+  selectedImageFile : File | null = null;
+  imagePreview      : string | null = null;
+  isUploadingImage  = false;
+ 
   constructor(
-    private route: ActivatedRoute,
-    private fb: FormBuilder,
-    private adminService: AdminService,
-    private router: Router
+    private route         : ActivatedRoute,
+    private fb            : FormBuilder,
+    private productService: ProductService,
+    private adminService  : AdminService,
+    private router        : Router
   ) {}
-
+ 
   ngOnInit(): void {
-    // Get product name from route
-    this.productName = this.route.snapshot.paramMap.get('name') || '';
-    
-    if (this.productName) {
-      this.loadProduct();
-    } else {
-      alert('Invalid product');
+    // Route param is now productId (number), not product name
+    const idParam = this.route.snapshot.paramMap.get('id') ??
+                    this.route.snapshot.paramMap.get('name'); // backward compat
+    const productId = idParam ? Number(idParam) : NaN;
+ 
+    if (isNaN(productId)) {
+      alert('Invalid product ID');
       this.router.navigate(['/admin/products']);
+      return;
     }
+    this.loadProduct(productId);
   }
-
-  /**
-   * Load product data
-   */
-  private loadProduct(): void {
-    this.isLoading = true;
-
-    this.adminService.getAllProducts().subscribe({
-      next: (products) => {
-        const product = products.find(p => p.productName === this.productName);
-        
-        if (product) {
-          this.productData = product;
-          this.initializeForm(product);
-          this.isLoading = false;
-        } else {
-          alert('Product not found');
-          this.router.navigate(['/admin/products']);
-        }
-      },
-      error: (error) => {
-        console.error('Error loading product:', error);
+ 
+  private loadProduct(id: number): void {
+    this.productService.getProduct(id).subscribe({
+      next: product => {
+        this.productData = product;
+        this.initForm(product);
         this.isLoading = false;
-        alert('Failed to load product');
-        this.router.navigate(['/admin/products']);
+      },
+      error: err => {
+        this.errorMsg  = 'Product not found.';
+        this.isLoading = false;
+        console.error('[UpdateProduct]', err);
       }
     });
   }
-
-  /**
-   * Initialize form with product data
-   */
-  private initializeForm(product: Product): void {
+ 
+  private initForm(p: Product): void {
     this.productForm = this.fb.group({
-      productId: [{ value: product.productId, disabled: true }],
-      productName: [{ value: product.productName, disabled: true }],
-      productDesc: [product.productDesc, [Validators.required, Validators.minLength(10)]],
-      price: [product.price, [Validators.required, Validators.min(0.01)]],
-      productInventory: [product.productInventory, [Validators.required, Validators.min(0)]]
+      productId  : [{ value: p.productId,   disabled: true }],
+      productName: [{ value: p.productName, disabled: true }], // name is immutable
+      // Editable fields
+      description  : [p.productDesc ?? '',   [Validators.required, Validators.minLength(10)]],
+      price        : [p.price,                [Validators.required, Validators.min(0.01)]],
+      // stockQuantity is updated via dedicated PUT /api/products/{id}/stock
+      stockQuantity: [p.stockQuantity ?? 0,  [Validators.required, Validators.min(0)]],
     });
   }
-
+ 
+  // ── Submit (stock update) ─────────────────────────────────
+ 
   /**
-   * Handle form submission
+   * Backend does NOT have a generic PUT /api/products/{id} to update
+   * description + price + stock in one call.
+   * Available operations:
+   *   PUT /api/products/{id}/stock?quantity=N
+   *   PUT /api/products/{id}/deactivate
+   *   POST /api/products/{id}/image
+   *
+   * We update stock via the dedicated endpoint.
+   * Description / price changes require a new product creation in this backend.
+   * A TODO note is displayed in the UI.
    */
   onSubmit(): void {
     if (this.productForm.invalid) {
-      Object.keys(this.productForm.controls).forEach(key => {
-        this.productForm.get(key)?.markAsTouched();
-      });
+      Object.values(this.productForm.controls).forEach(c => c.markAsTouched());
       return;
     }
-
     this.isSubmitting = true;
-
-    const updatedProduct: UpdateProductDTO = {
-      productName: this.productData.productName,
-      productDesc: this.productForm.get('productDesc')?.value,
-      price: this.productForm.get('price')?.value,
-      productInventory: this.productForm.get('productInventory')?.value
-    };
-
-    this.adminService.updateProduct(updatedProduct).subscribe({
-      next: () => {
-        console.log('Product updated successfully');
-        this.isSubmitting = false;
-        alert('Product updated successfully!');
-        this.router.navigate(['/admin/products']);
+    this.errorMsg     = '';
+ 
+    const newStock = Number(this.productForm.get('stockQuantity')?.value);
+ 
+    this.adminService.updateProductStock(this.productData.productId, newStock)
+      .subscribe({
+        next: updated => {
+          this.productData      = updated;
+          this.isSubmitting     = false;
+          this.successMsg       = 'Stock updated successfully!';
+        },
+        error: err => {
+          this.isSubmitting = false;
+          this.errorMsg     = err?.error?.message ?? 'Stock update failed.';
+        }
+      });
+  }
+ 
+  // ── Image upload ──────────────────────────────────────────
+ 
+  onImageSelect(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.selectedImageFile = file;
+    const reader = new FileReader();
+    reader.onload = e => { this.imagePreview = e.target?.result as string; };
+    reader.readAsDataURL(file);
+  }
+ 
+  uploadImage(): void {
+    if (!this.selectedImageFile) return;
+    this.isUploadingImage = true;
+ 
+    this.adminService.uploadProductImage(this.productData.productId, this.selectedImageFile)
+      .subscribe({
+        next: updated => {
+          this.productData       = updated;
+          this.isUploadingImage  = false;
+          this.selectedImageFile = null;
+          this.imagePreview      = null;
+          this.successMsg        = 'Image uploaded!';
+        },
+        error: err => {
+          this.isUploadingImage = false;
+          this.errorMsg = err?.error?.message ?? 'Image upload failed.';
+        }
+      });
+  }
+ 
+  removeImage(): void {
+    if (!confirm('Remove product image?')) return;
+    this.adminService.deleteProductImage(this.productData.productId).subscribe({
+      next: updated => {
+        this.productData = updated;
+        this.successMsg  = 'Image removed.';
       },
-      error: (error) => {
-        console.error('Error updating product:', error);
-        this.isSubmitting = false;
-        alert('Failed to update product. Please try again.');
+      error: err => {
+        this.errorMsg = err?.error?.message ?? 'Failed to remove image.';
       }
     });
   }
-
-  /**
-   * Check if field has error
-   */
-  hasError(fieldName: string): boolean {
-    const field = this.productForm?.get(fieldName);
-    return !!(field && field.invalid && field.touched);
+ 
+  // ── UI helpers ────────────────────────────────────────────
+ 
+  hasError(field: string): boolean {
+    const c = this.productForm?.get(field);
+    return !!(c && c.invalid && c.touched);
   }
-
-  /**
-   * Get error message
-   */
-  getErrorMessage(fieldName: string): string {
-    const field = this.productForm?.get(fieldName);
-    
-    if (field?.hasError('required')) {
-      return 'This field is required';
-    }
-    if (field?.hasError('minlength')) {
-      const minLength = field.errors?.['minlength'].requiredLength;
-      return `Must be at least ${minLength} characters`;
-    }
-    if (field?.hasError('min')) {
-      const min = field.errors?.['min'].min;
-      return `Must be at least ${min}`;
-    }
-    
+ 
+  getErrorMessage(field: string): string {
+    const c = this.productForm?.get(field);
+    if (c?.hasError('required'))  return 'This field is required';
+    if (c?.hasError('minlength')) return `At least ${c.errors?.['minlength'].requiredLength} characters`;
+    if (c?.hasError('min'))       return `Must be ≥ ${c.errors?.['min'].min}`;
     return '';
   }
-
-  /**
-   * Cancel and go back
-   */
-  cancel(): void {
-    this.router.navigate(['/admin/products']);
-  }
+ 
+  cancel(): void { this.router.navigate(['/admin/products']); }
 }

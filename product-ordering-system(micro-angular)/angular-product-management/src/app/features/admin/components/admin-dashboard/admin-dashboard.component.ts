@@ -6,6 +6,8 @@ import { FormsModule } from "@angular/forms";
 import { CommonModule } from "@angular/common";
 import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
 import { HighlightDirective } from "../../../../shared/directives/highlight.directive";
+import { forkJoin } from "rxjs";
+import { DashboardStats, getOrderStatusBadgeClass, getStockBadge } from "../../../../core/modules/product.model";
 
 
 @Component({
@@ -16,147 +18,98 @@ import { HighlightDirective } from "../../../../shared/directives/highlight.dire
   styleUrls: ['./admin-dashboard.component.css']
 })
 export class AdminDashboardComponent implements OnInit {
-  // Dashboard stats
-  stats = {
-    totalProducts: 0,
-    totalOrders: 0,
-    totalUsers: 0,
-    totalRevenue: 0,
+ 
+  stats: DashboardStats = {
+    totalProducts   : 0,
+    totalOrders     : 0,
+    totalUsers      : 0,
+    totalRevenue    : 0,
     lowStockProducts: 0,
-    pendingOrders: 0
+    pendingOrders   : 0,
   };
-
-  products: Product[] = [];
-  recentOrders: Order[] = [];
-  isLoading: boolean = true;
-
+ 
+  products    : Product[] = [];
+  recentOrders: Order[]   = [];
+  isLoading    = true;
+  errorMsg     = '';
+ 
   constructor(
     private adminService: AdminService,
-    private router: Router
+    private router      : Router
   ) {}
-
-  ngOnInit(): void {
-    this.loadDashboardData();
-  }
-
-  /**
-   * Load all dashboard data
-   */
-  public loadDashboardData(): void {
+ 
+  ngOnInit(): void { this.loadDashboardData(); }
+ 
+  loadDashboardData(): void {
     this.isLoading = true;
-
-    // Load stats
-    this.adminService.getDashboardStats().subscribe({
-      next: (stats) => {
-        this.stats = stats;
-        console.log('Dashboard stats loaded:', stats);
-      },
-      error: (error) => {
-        console.error('Error loading stats:', error);
-      }
-    });
-
-    // Load products
-    this.adminService.getAllProducts().subscribe({
-      next: (products) => {
-        this.products = products;
+    this.errorMsg  = '';
+ 
+    forkJoin({
+      stats   : this.adminService.getDashboardStats(),
+      products: this.adminService.getAllProducts(),
+      orders  : this.adminService.getAllOrders(),
+    }).subscribe({
+      next: ({ stats, products, orders }) => {
+        this.stats        = {
+          ...stats,
+          totalUsers      : 0,                        // loaded separately if needed
+          lowStockProducts: products.filter(p => (p.stockQuantity ?? 0) < 20).length,
+        };
+        this.products     = products;
+        this.recentOrders = orders
+          .sort((a, b) =>
+            new Date(b.orderDate ?? 0).getTime() - new Date(a.orderDate ?? 0).getTime()
+          )
+          .slice(0, 5);
         this.isLoading = false;
       },
-      error: (error) => {
-        console.error('Error loading products:', error);
+      error: err => {
+        this.errorMsg  = 'Failed to load dashboard data. Check the API gateway.';
         this.isLoading = false;
-      }
-    });
-
-    // Load recent orders
-    this.adminService.getAllOrders().subscribe({
-      next: (orders) => {
-        this.recentOrders = orders.slice(0, 5); // Get last 5 orders
-      },
-      error: (error) => {
-        console.error('Error loading orders:', error);
+        console.error('[Dashboard] load error', err);
       }
     });
   }
-
-  /**
-   * Sort products by price (ascending)
-   */
+ 
+  // ── Product sort helpers ──────────────────────────────────
+ 
   filterByAsc(): void {
-    this.adminService.getProductsByAscOrder().subscribe({
-      next: (products) => {
-        this.products = products;
-      }
-    });
+    this.products = this.adminService.getProductsByAscOrder(this.products);
   }
-
-  /**
-   * Sort products by price (descending)
-   */
+ 
   filterByDesc(): void {
-    this.adminService.getProductsByDescOrder().subscribe({
-      next: (products) => {
-        this.products = products;
-      }
-    });
+    this.products = this.adminService.getProductsByDescOrder(this.products);
   }
-
-  /**
-   * Get top ordered products
-   */
+ 
   filterTopOrdered(): void {
-    this.adminService.getTopOrderedProducts().subscribe({
-      next: (products) => {
-        this.products = products;
-      }
-    });
+    this.products = this.adminService.getTopOrderedProducts(this.products);
   }
-
-  /**
-   * Navigate to product details
-   */
-  viewProduct(productName: string): void {
-    this.router.navigate(['/admin/update-product', productName]);
+ 
+  // ── Navigation ────────────────────────────────────────────
+ 
+  viewProduct(productId: number): void {
+    this.router.navigate(['/admin/update-product', productId]);
   }
-
-  /**
-   * Navigate to order details
-   */
+ 
   viewOrder(orderId: number): void {
     this.router.navigate(['/admin/update-order', orderId]);
   }
-
-  /**
-   * Get status badge class
-   */
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'DELIVERED':
-      case 'COMPLETED':
-        return 'bg-success';
-      case 'DISPATCHED':
-      case 'SHIPPED':
-        return 'bg-info';
-      case 'ORDERED':
-      case 'PENDING':
-        return 'bg-warning';
-      case 'CANCELLED':
-        return 'bg-danger';
-      default:
-        return 'bg-secondary';
-    }
-  }
-
-  /**
-   * Get stock level indicator
-   */
-  getStockLevel(inventory: number): { label: string; class: string } {
-    if (inventory === 0) {
-      return { label: 'Out of Stock', class: 'text-danger' };
-    } else if (inventory < 50) {
-      return { label: 'Low Stock', class: 'text-warning' };
-    } else {
-      return { label: 'In Stock', class: 'text-success' };
-    }
+ 
+  // ── UI helpers ────────────────────────────────────────────
+ 
+  getStatusClass  = getOrderStatusBadgeClass;
+  getStockLevel   = getStockBadge;
+ 
+  /** First line of the order summary: list product names from productDetails */
+  // getOrderProductSummary(order: Order): string {
+  //   if (order.productDetails?.length) {
+  //     return order.userName.map(p => p.productName).join(', ');
+  //   }
+  //   return `${order.productId?.length ?? 0} product(s)`;
+  // }
+ 
+  /** Customer label from order */
+  getOrderCustomer(order: Order): string {
+    return order.userName ?? `User #${order.userId}`;
   }
 }

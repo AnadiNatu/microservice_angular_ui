@@ -5,6 +5,8 @@ import { AdminService } from "../../services/admin.service";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
+import { getOrderStatusBadgeClass } from "../../../../core/modules/product.model";
+import { OrderService } from "../../../../core/services/order.service";
 
 @Component({
   selector: 'app-order-list',
@@ -14,150 +16,95 @@ import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pip
   imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule],
 })
 export class OrderListComponent implements OnInit {
-  orders: Order[] = [];
+  orders        : Order[] = [];
   filteredOrders: Order[] = [];
-  
-  // Filter inputs
-  productNameFilter: string = '';
-  userIdFilter: number | null = null;
-  statusFilter: string = 'all';
-  
-  isLoading: boolean = true;
-
-  // Status options
-  statusOptions = ['all', 'ORDERED', 'DISPATCHED', 'DELIVERED', 'CANCELLED', 'PENDING', 'SHIPPED'];
-
+ 
+  usernameFilter = '';
+  statusFilter   = 'all';
+  isLoading      = true;
+  errorMsg       = '';
+ 
+  statusOptions = [
+    'all', 'PENDING', 'CONFIRMED', 'PROCESSING',
+    'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'
+  ];
+ 
   constructor(
     private adminService: AdminService,
-    private router: Router
+    private orderService: OrderService,
+    private router      : Router
   ) {}
-
-  ngOnInit(): void {
-    this.loadOrders();
-  }
-
-  /**
-   * Load all orders
-   */
+ 
+  ngOnInit(): void { this.loadOrders(); }
+ 
   loadOrders(): void {
     this.isLoading = true;
-    
+    this.errorMsg  = '';
+ 
     this.adminService.getAllOrders().subscribe({
-      next: (orders) => {
-        this.orders = orders;
-        this.filteredOrders = orders;
-        this.isLoading = false;
-        console.log('Orders loaded:', orders.length);
+      next: orders => {
+        this.orders = orders.sort((a, b) =>
+          new Date(b.orderDate ?? 0).getTime() - new Date(a.orderDate ?? 0).getTime()
+        );
+        this.filteredOrders = this.orders;
+        this.isLoading      = false;
       },
-      error: (error) => {
-        console.error('Error loading orders:', error);
+      error: err => {
+        this.errorMsg  = 'Failed to load orders.';
         this.isLoading = false;
+        console.error('[OrderList]', err);
       }
     });
   }
-
-  /**
-   * Apply filters
-   */
+ 
   applyFilters(): void {
-    this.filteredOrders = this.orders.filter(order => {
-      // Product name filter
-      const matchesProduct = !this.productNameFilter || 
-        order.productName.toLowerCase().includes(this.productNameFilter.toLowerCase());
-      
-      // User ID filter
-      const matchesUser = !this.userIdFilter || 
-        order.userId === this.userIdFilter;
-      
-      // Status filter
-      const matchesStatus = this.statusFilter === 'all' || 
-        order.orderStatus === this.statusFilter;
-      
-      return matchesProduct && matchesUser && matchesStatus;
+    this.filteredOrders = this.orders.filter(o => {
+      const matchUser = !this.usernameFilter ||
+        (o.userName ?? '').toLowerCase().includes(this.usernameFilter.toLowerCase());
+      const matchStatus = this.statusFilter === 'all' || o.orderStatus === this.statusFilter;
+      return matchUser && matchStatus;
     });
-
-    console.log('Filtered orders:', this.filteredOrders.length);
   }
-
-  /**
-   * Clear all filters
-   */
+ 
   clearFilters(): void {
-    this.productNameFilter = '';
-    this.userIdFilter = null;
-    this.statusFilter = 'all';
+    this.usernameFilter = '';
+    this.statusFilter   = 'all';
     this.filteredOrders = this.orders;
   }
-
-  /**
-   * Navigate to update order
-   */
+ 
   updateOrder(orderId: number): void {
     this.router.navigate(['/admin/update-order', orderId]);
   }
-
-  /**
-   * Delete order with confirmation
-   */
-  deleteOrder(order: Order): void {
-    const confirmMessage = `Are you sure you want to delete order #${order.orderId}?\n\nProduct: ${order.productName}\nCustomer: ${order.userName}`;
-    
-    if (confirm(confirmMessage)) {
-      this.adminService.deleteOrder(order.userId, order.productName).subscribe({
-        next: () => {
-          console.log('Order deleted:', order.orderId);
-          this.loadOrders();
-          this.showSuccessMessage('Order deleted successfully');
-        },
-        error: (error) => {
-          console.error('Error deleting order:', error);
-          alert('Failed to delete order. Please try again.');
-        }
-      });
-    }
+ 
+  cancelOrder(order: Order): void {
+    if (!confirm(`Cancel order #${order.orderId}?\nThis cannot be undone.`)) return;
+    this.orderService.cancelOrder(order.orderId).subscribe({
+      next: () => { this.showToast('Order cancelled'); this.loadOrders(); },
+      error: err => alert('Failed: ' + (err?.error?.message ?? err?.message))
+    });
   }
-
-  /**
-   * Navigate to create order
-   */
-  createNewOrder(): void {
-    this.router.navigate(['/admin/create-order']);
-  }
-
-  /**
-   * Get status badge class
-   */
-  getStatusBadgeClass(status: string): string {
-    const statusMap: { [key: string]: string } = {
-      'DELIVERED': 'bg-success',
-      'COMPLETED': 'bg-success',
-      'DISPATCHED': 'bg-info',
-      'SHIPPED': 'bg-info',
-      'ORDERED': 'bg-warning text-dark',
-      'PENDING': 'bg-warning text-dark',
-      'CANCELLED': 'bg-danger'
-    };
-    
-    return statusMap[status] || 'bg-secondary';
-  }
-
-  /**
-   * Show success message
-   */
-  private showSuccessMessage(message: string): void {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
-    alertDiv.style.zIndex = '9999';
-    alertDiv.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${message}`;
-    document.body.appendChild(alertDiv);
-
-    setTimeout(() => alertDiv.remove(), 3000);
-  }
-
-  /**
-   * Navigate back to dashboard
-   */
-  goBack(): void {
-    this.router.navigate(['/admin/dashboard']);
+ 
+  createNewOrder(): void { this.router.navigate(['/admin/create-order']); }
+  goBack()        : void { this.router.navigate(['/admin/dashboard']); }
+ 
+  getStatusBadgeClass = getOrderStatusBadgeClass;
+ 
+  // getProductSummary(order: Order): string {
+  //   if (order.productDetails?.length)
+  //     return order.productDetails.map(p => p.productName).join(', ');
+  //   return `${order.productIds?.length ?? 0} product(s)`;
+  // }
+ 
+  // getTotalQty(order: Order): number {
+  //   return (order.orderQuantity ?? []).reduce((s, q) => s + q, 0);
+  // }
+ 
+  private showToast(msg: string): void {
+    const el = document.createElement('div');
+    el.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+    el.style.zIndex = '9999';
+    el.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>${msg}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
   }
 }

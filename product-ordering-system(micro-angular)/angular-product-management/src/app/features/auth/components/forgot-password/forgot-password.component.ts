@@ -7,92 +7,71 @@ import { CommonModule } from '@angular/common';
 import { CustomCurrencyPipe } from '../../../../shared/pipes/custom-currency.pipe';
 
 @Component({
-  selector: 'app-forgot-password',
+  selector   : 'app-forgot-password',
   templateUrl: './forgot-password.component.html',
-  styleUrls: ['./forgot-password.component.css'],
-standalone: true,
-  imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule , ReactiveFormsModule],
+  styleUrls  : ['./forgot-password.component.css'],
+  standalone : true,
+  imports    : [FormsModule, CommonModule, CustomCurrencyPipe, RouterModule, ReactiveFormsModule],
 })
 export class ForgotPasswordComponent {
+ 
   forgotPasswordForm: FormGroup;
-  isLoading: boolean = false;
-  successMessage: string = '';
-  errorMessage: string = '';
-
+  isLoading      = false;
+  successMessage = '';
+  errorMessage   = '';
+  selectedMethod: 'email' | 'sms' = 'email';
+ 
   constructor(
-    private fb: FormBuilder,
+    private fb         : FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router     : Router
   ) {
     this.forgotPasswordForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]]
+      email : ['', [Validators.required, Validators.email]],
+      method: ['email']
     });
   }
-
-  /**
-   * Handle form submission
-   */
+ 
   onSubmit(): void {
     if (this.forgotPasswordForm.invalid) {
       this.forgotPasswordForm.get('email')?.markAsTouched();
       return;
     }
-
-    const request: ForgotPasswordRequest = {
-      email: this.forgotPasswordForm.value.email
+ 
+    const req: ForgotPasswordRequest = {
+      email : this.forgotPasswordForm.value.email.trim(),
+      method: this.forgotPasswordForm.value.method as 'email' | 'sms'
     };
-
-    this.isLoading = true;
-    this.errorMessage = '';
+ 
+    this.isLoading      = true;
+    this.errorMessage   = '';
     this.successMessage = '';
-
-    this.authService.forgotPassword(request).subscribe({
-      next: (message) => {
-        this.isLoading = false;
-        this.successMessage = message;
-        console.log('Password reset email sent');
-        
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          this.router.navigate(['/auth/login']);
-        }, 3000);
+ 
+    // POST /api/password/forgot?email=...&method=email
+    this.authService.forgotPassword(req).subscribe({
+      next: res => {
+        this.isLoading      = false;
+        this.successMessage = res?.message ?? 'OTP sent! Check your email or phone.';
+        setTimeout(() => this.router.navigate(['/auth/reset-password']), 3000);
       },
-      error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = error.message || 'Failed to send reset email. Please try again.';
-        console.error('Forgot password error:', error);
+      error: err => {
+        this.isLoading    = false;
+        this.errorMessage = err?.error?.message ?? err?.message ?? 'Something went wrong.';
       }
     });
   }
-
-  /**
-   * Check if email field has error
-   */
+ 
   hasEmailError(): boolean {
-    const email = this.forgotPasswordForm.get('email');
-    return !!(email && email.invalid && email.touched);
+    const c = this.forgotPasswordForm.get('email');
+    return !!(c && c.invalid && c.touched);
   }
-
-  /**
-   * Get email error message
-   */
+ 
   getEmailError(): string {
-    const email = this.forgotPasswordForm.get('email');
-    
-    if (email?.hasError('required')) {
-      return 'Email is required';
-    }
-    if (email?.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-    
+    const c = this.forgotPasswordForm.get('email');
+    if (c?.hasError('required')) return 'Email is required';
+    if (c?.hasError('email'))    return 'Enter a valid email address';
     return '';
   }
-
-  /**
-   * Navigate to login
-   */
-  goToLogin(): void {
-    this.router.navigate(['/auth/login']);
-  }
+ 
+  goToLogin(): void { this.router.navigate(['/auth/login']); }
 }

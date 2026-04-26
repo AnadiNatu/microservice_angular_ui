@@ -5,6 +5,7 @@ import { User } from '../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CustomCurrencyPipe } from '../../pipes/custom-currency.pipe';
+import { ProfileResponse, UpdateProfileRequest } from '../../../core/modules/user.model';
 
 @Component({
   selector: 'app-profile',
@@ -14,161 +15,214 @@ import { CustomCurrencyPipe } from '../../pipes/custom-currency.pipe';
   imports: [FormsModule , CommonModule , CustomCurrencyPipe , RouterLink , ReactiveFormsModule],
 })
 export class ProfileComponent implements OnInit {
-  profileForm!: FormGroup;
-  currentUser: User | null = null;
-  isEditMode: boolean = false;
-  uploadedImage: string | null = null;
-
+ profileForm !: FormGroup;
+  currentUser  : User | null = null;
+  isEditMode   = false;
+  isLoading    = false;
+  isSaving     = false;
+  successMsg   = '';
+  errorMsg     = '';
+ 
+  // Photo upload state
+  selectedFile  : File | null = null;
+  photoPreview  : string | null = null;
+  isUploadingPhoto = false;
+ 
   constructor(
-    private fb: FormBuilder,
+    private fb         : FormBuilder,
     private authService: AuthService
   ) {}
-
+ 
   ngOnInit(): void {
-    // Get current user from service
     this.currentUser = this.authService.getCurrentUser();
-
-    // Initialize form with user data
-    this.initializeForm();
-
-    console.log('ProfileComponent initialized with user:', this.currentUser);
+    this.initForm();
+    this.loadProfileFromBackend();
   }
-
+ 
+  // ── Backend fetch ─────────────────────────────────────────
+ 
   /**
-   * Initialize reactive form with current user data
+   * GET /api/profile/me (JWT required)
+   * Refreshes local user signal with the latest data from auth-service.
    */
-  private initializeForm(): void {
+  private loadProfileFromBackend(): void {
+    this.isLoading = true;
+    this.authService.getProfile().subscribe({
+      next: (profile: ProfileResponse) => {
+        this.isLoading = false;
+        // Patch the in-memory user with full backend data
+        const updated: User = {
+          id            : profile.id,
+          username      : profile.username,
+          email         : profile.email,
+          roles         : profile.roles,
+          phoneNumber   : profile.phoneNumber,
+          profilePicture: profile.profilePicture,
+          provider      : profile.provider,
+        };
+        this.currentUser = updated;
+        this.initForm();
+      },
+      error: () => {
+        this.isLoading = false;
+        // Fall back to cached user from localStorage
+      }
+    });
+  }
+ 
+  // ── Form ──────────────────────────────────────────────────
+ 
+  private initForm(): void {
     this.profileForm = this.fb.group({
-      fname: [
-        { value: this.currentUser?.fname || '', disabled: !this.isEditMode },
-        [Validators.required, Validators.minLength(2)]
+      username   : [
+        { value: this.currentUser?.username ?? '', disabled: !this.isEditMode },
+        [Validators.required, Validators.minLength(3)]
       ],
-      lname: [
-        { value: this.currentUser?.lname || '', disabled: !this.isEditMode },
-        [Validators.required, Validators.minLength(2)]
-      ],
-      email: [
-        { value: this.currentUser?.email || '', disabled: true }, // Email always disabled
+      email      : [
+        { value: this.currentUser?.email ?? '', disabled: true }, // read-only
         [Validators.required, Validators.email]
       ],
       phoneNumber: [
-        { value: this.currentUser?.phoneNumber || '', disabled: !this.isEditMode },
+        { value: this.currentUser?.phoneNumber ?? '', disabled: !this.isEditMode },
         [Validators.pattern(/^[+]?[\d\s\-()]+$/)]
-      ]
+      ],
     });
   }
-
-  /**
-   * Toggle edit mode
-   */
+ 
   toggleEditMode(): void {
     this.isEditMode = !this.isEditMode;
-
     if (this.isEditMode) {
-      // Enable form controls
-      this.profileForm.get('fname')?.enable();
-      this.profileForm.get('lname')?.enable();
+      this.profileForm.get('username')?.enable();
       this.profileForm.get('phoneNumber')?.enable();
     } else {
-      // Disable form controls and reset to original values
-      this.profileForm.get('fname')?.disable();
-      this.profileForm.get('lname')?.disable();
+      // Cancel – restore original values
+      this.profileForm.get('username')?.disable();
       this.profileForm.get('phoneNumber')?.disable();
       this.profileForm.patchValue({
-        fname: this.currentUser?.fname,
-        lname: this.currentUser?.lname,
-        phoneNumber: this.currentUser?.phoneNumber
+        username   : this.currentUser?.username ?? '',
+        phoneNumber: this.currentUser?.phoneNumber ?? '',
       });
+      this.successMsg = '';
+      this.errorMsg   = '';
     }
   }
-
-  /**
-   * Save profile changes
-   */
+ 
+  /** PUT /api/profile/me */
   saveProfile(): void {
     if (this.profileForm.invalid) {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.profileForm.controls).forEach(key => {
-        this.profileForm.get(key)?.markAsTouched();
-      });
+      Object.values(this.profileForm.controls).forEach(c => c.markAsTouched());
       return;
     }
-
-    // Get form values
-    const formValue = this.profileForm.getRawValue();
-
-    // Update user object
-    if (this.currentUser) {
-      const updatedUser: User = {
-        ...this.currentUser,
-        fname: formValue.fname,
-        lname: formValue.lname,
-        phoneNumber: formValue.phoneNumber,
-        avatar: this.uploadedImage || this.currentUser.avatar
-      };
-
-      // Update via service
-      this.authService.updateUser(updatedUser);
-      this.currentUser = updatedUser;
-
-      console.log('Profile updated:', updatedUser);
-      alert('Profile updated successfully!');
-    }
-
-    // Exit edit mode
-    this.toggleEditMode();
+    this.isSaving  = true;
+    this.successMsg = '';
+    this.errorMsg   = '';
+ 
+    const req: UpdateProfileRequest = {
+      username   : this.profileForm.getRawValue().username?.trim(),
+      phoneNumber: this.profileForm.getRawValue().phoneNumber?.trim() || undefined,
+    };
+ 
+    this.authService.updateProfile(req).subscribe({
+      next: () => {
+        this.isSaving   = false;
+        this.successMsg = 'Profile updated successfully!';
+        this.currentUser = this.authService.getCurrentUser();
+        this.isEditMode  = false;
+        this.profileForm.get('username')?.disable();
+        this.profileForm.get('phoneNumber')?.disable();
+      },
+      error: err => {
+        this.isSaving = false;
+        this.errorMsg = err?.error?.message ?? 'Update failed. Please try again.';
+      }
+    });
   }
-
-  /**
-   * Handle profile picture upload (mock)
-   */
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.uploadedImage = e.target.result;
-        console.log('Image uploaded:', file.name);
-      };
-      reader.readAsDataURL(file);
+ 
+  // ── Photo upload ──────────────────────────────────────────
+ 
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file  = input.files?.[0];
+    if (!file) return;
+ 
+    // Validate client-side
+    if (file.size > 5 * 1024 * 1024) {
+      this.errorMsg = 'File size must be under 5 MB.';
+      return;
     }
+    if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+      this.errorMsg = 'Only JPG, PNG, GIF and WebP images are supported.';
+      return;
+    }
+ 
+    this.selectedFile = file;
+    this.errorMsg     = '';
+ 
+    // Local preview
+    const reader = new FileReader();
+    reader.onload = e => { this.photoPreview = e.target?.result as string; };
+    reader.readAsDataURL(file);
   }
-
-  /**
-   * Get validation error message for a field
-   */
-  getErrorMessage(fieldName: string): string {
-    const control = this.profileForm.get(fieldName);
-    
-    if (control?.hasError('required')) {
-      return `${fieldName} is required`;
-    }
-    if (control?.hasError('minlength')) {
-      return `${fieldName} must be at least 2 characters`;
-    }
-    if (control?.hasError('email')) {
-      return 'Invalid email format';
-    }
-    if (control?.hasError('pattern')) {
-      return 'Invalid phone number format';
-    }
-    
+ 
+  /** POST /api/profile/photo (multipart) */
+  uploadPhoto(): void {
+    if (!this.selectedFile) return;
+    this.isUploadingPhoto = true;
+    this.errorMsg         = '';
+ 
+    this.authService.uploadProfilePhoto(this.selectedFile).subscribe({
+      next: res => {
+        this.isUploadingPhoto = false;
+        this.successMsg       = 'Profile photo updated successfully!';
+        this.currentUser      = this.authService.getCurrentUser();
+        this.selectedFile     = null;
+        this.photoPreview     = null;
+      },
+      error: err => {
+        this.isUploadingPhoto = false;
+        this.errorMsg = err?.error?.message ?? 'Photo upload failed.';
+      }
+    });
+  }
+ 
+  /** DELETE /api/profile/photo */
+  removePhoto(): void {
+    if (!confirm('Remove your profile photo?')) return;
+    this.authService.deleteProfilePhoto().subscribe({
+      next: () => {
+        this.successMsg  = 'Profile photo removed.';
+        this.currentUser = this.authService.getCurrentUser();
+        this.photoPreview = null;
+      },
+      error: err => {
+        this.errorMsg = err?.error?.message ?? 'Failed to remove photo.';
+      }
+    });
+  }
+ 
+  // ── Display helpers ───────────────────────────────────────
+ 
+  getAvatarUrl(): string {
+    if (this.photoPreview) return this.photoPreview;
+    if (this.currentUser?.profilePicture) return this.currentUser.profilePicture;
+    const name = this.currentUser?.username ?? 'User';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b82f6&color=fff`;
+  }
+ 
+  getRoleLabel(): string {
+    return this.currentUser?.roles?.[0]?.replace('ROLE_', '') ?? 'USER';
+  }
+ 
+  hasError(field: string): boolean {
+    const c = this.profileForm.get(field);
+    return !!(c && c.invalid && c.touched);
+  }
+ 
+  getErrorMessage(field: string): string {
+    const c = this.profileForm.get(field);
+    if (c?.hasError('required'))  return `${field} is required`;
+    if (c?.hasError('minlength')) return `At least ${c.errors?.['minlength'].requiredLength} characters`;
+    if (c?.hasError('pattern'))   return 'Invalid phone number format';
     return '';
-  }
-
-  /**
-   * Check if field has error and is touched
-   */
-  hasError(fieldName: string): boolean {
-    const control = this.profileForm.get(fieldName);
-    return !!(control && control.invalid && control.touched);
-  }
-
-  /**
-   * Get display avatar
-   */
-  getAvatar(): string {
-    return this.uploadedImage || this.currentUser?.avatar || 
-           `https://ui-avatars.com/api/?name=${this.currentUser?.fname}+${this.currentUser?.lname}&background=random`;
   }
 }

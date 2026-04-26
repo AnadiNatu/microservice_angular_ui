@@ -1,27 +1,44 @@
-<!-- Update Product Component -->
+<!-- src/app/features/admin/components/update-product/update-product.component.html -->
 <div class="update-product-container">
-  <!-- Loading State -->
+
   @if (isLoading) {
     <div class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p class="text-muted mt-3">Loading product data...</p>
+      <div class="spinner-border text-primary"></div>
+      <p class="text-muted mt-3">Loading product…</p>
     </div>
   }
 
-  <!-- Update Form -->
   @if (!isLoading && productForm) {
-    <!-- Page Header -->
     <div class="mb-4">
       <h2 class="mb-1 fw-bold">
-        <i class="bi bi-pencil-square me-2 text-warning"></i>
-        Update Product
+        <i class="bi bi-pencil-square me-2 text-warning"></i>Update Product
       </h2>
-      <p class="text-muted mb-0">Edit product information</p>
+      <p class="text-muted mb-0">Edit product stock and image</p>
+    </div>
+
+    <!-- Alerts -->
+    @if (successMsg) {
+      <div class="alert alert-success">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ successMsg }}
+      </div>
+    }
+    @if (errorMsg) {
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMsg }}
+      </div>
+    }
+
+    <!-- Note about backend limitations -->
+    <div class="alert alert-info mb-4">
+      <i class="bi bi-info-circle me-2"></i>
+      <strong>Note:</strong> The backend exposes a dedicated
+      <code>PUT /api/products/{{'{'}}id{{'}'}}/stock</code> endpoint for stock updates
+      and <code>POST /api/products/{{'{'}}id{{'}'}}/image</code> for image uploads.
+      To change price or description, deactivate this product and create a new one.
     </div>
 
     <div class="row">
+      <!-- Form -->
       <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-gradient-warning text-dark py-3">
@@ -33,118 +50,69 @@
 
           <div class="card-body p-4">
             <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
-              <!-- Product ID (Read-only) -->
+
+              <!-- Read-only ID -->
               <div class="mb-3">
-                <label class="form-label fw-semibold text-muted">
-                  <i class="bi bi-hash me-2"></i>
-                  Product ID
-                </label>
-                <input 
-                  type="text" 
-                  class="form-control"
-                  formControlName="productId"
-                  readonly>
+                <label class="form-label fw-semibold text-muted">Product ID</label>
+                <input type="text" class="form-control" formControlName="productId" readonly>
               </div>
 
-              <!-- Product Name (Read-only) -->
+              <!-- Read-only Name -->
               <div class="mb-3">
-                <label class="form-label fw-semibold text-muted">
-                  <i class="bi bi-tag me-2"></i>
-                  Product Name
-                </label>
-                <input 
-                  type="text" 
-                  class="form-control"
-                  formControlName="productName"
-                  readonly>
+                <label class="form-label fw-semibold text-muted">Product Name</label>
+                <input type="text" class="form-control" formControlName="productName" readonly>
                 <small class="text-muted">Product name cannot be changed</small>
               </div>
 
-              <!-- Description -->
+              <!-- Description (read-only display — no PUT endpoint) -->
               <div class="mb-3">
+                <label class="form-label fw-semibold text-muted">Description</label>
+                <textarea class="form-control" rows="3" readonly
+                  [value]="productData.description ?? ''"></textarea>
+                <small class="text-muted">
+                  Description updates require creating a new product
+                </small>
+              </div>
+
+              <!-- Price (read-only display) -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-muted">Price</label>
+                <input type="text" class="form-control" readonly
+                  [value]="productData.price | customCurrency">
+                <small class="text-muted">Price updates require creating a new product</small>
+              </div>
+
+              <hr class="my-4">
+
+              <!-- Stock (editable via PUT /stock endpoint) -->
+              <div class="mb-4">
                 <label class="form-label fw-semibold">
-                  <i class="bi bi-text-paragraph me-2 text-warning"></i>
-                  Description
+                  <i class="bi bi-box-seam me-2 text-warning"></i>
+                  Stock Quantity
                   <span class="text-danger">*</span>
                 </label>
-                <textarea 
-                  class="form-control"
-                  [class.is-invalid]="hasError('productDesc')"
-                  formControlName="productDesc"
-                  rows="4"></textarea>
-                
-                @if (hasError('productDesc')) {
-                  <div class="invalid-feedback">
-                    {{ getErrorMessage('productDesc') }}
-                  </div>
+                <input type="number" class="form-control form-control-lg"
+                  [class.is-invalid]="hasError('stockQuantity')"
+                  formControlName="stockQuantity" min="0">
+                @if (hasError('stockQuantity')) {
+                  <div class="invalid-feedback">{{ getErrorMessage('stockQuantity') }}</div>
                 }
+                <small class="text-muted">
+                  Calls <code>PUT /api/products/{{ productData.productId }}/stock</code>
+                </small>
               </div>
 
-              <!-- Price & Inventory -->
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-semibold">
-                    <i class="bi bi-currency-dollar me-2 text-warning"></i>
-                    Price (USD)
-                    <span class="text-danger">*</span>
-                  </label>
-                  <input 
-                    type="number" 
-                    class="form-control form-control-lg"
-                    [class.is-invalid]="hasError('price')"
-                    formControlName="price"
-                    step="0.01"
-                    min="0">
-                  
-                  @if (hasError('price')) {
-                    <div class="invalid-feedback">
-                      {{ getErrorMessage('price') }}
-                    </div>
-                  }
-                </div>
-
-                <div class="col-md-6 mb-3">
-                  <label class="form-label fw-semibold">
-                    <i class="bi bi-box-seam me-2 text-warning"></i>
-                    Inventory
-                    <span class="text-danger">*</span>
-                  </label>
-                  <input 
-                    type="number" 
-                    class="form-control form-control-lg"
-                    [class.is-invalid]="hasError('productInventory')"
-                    formControlName="productInventory"
-                    min="0">
-                  
-                  @if (hasError('productInventory')) {
-                    <div class="invalid-feedback">
-                      {{ getErrorMessage('productInventory') }}
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <!-- Form Actions -->
-              <div class="d-flex justify-content-between mt-4">
-                <button 
-                  type="button" 
-                  class="btn btn-outline-secondary btn-lg"
-                  (click)="cancel()"
-                  [disabled]="isSubmitting">
-                  <i class="bi bi-x-circle me-2"></i>
-                  Cancel
+              <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary btn-lg"
+                  (click)="cancel()" [disabled]="isSubmitting">
+                  <i class="bi bi-x-circle me-2"></i>Cancel
                 </button>
-
-                <button 
-                  type="submit" 
-                  class="btn btn-warning btn-lg text-dark"
+                <button type="submit" class="btn btn-warning btn-lg text-dark"
                   [disabled]="isSubmitting || productForm.invalid">
                   @if (isSubmitting) {
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Updating...
+                    <span class="spinner-border spinner-border-sm me-2"></span>Updating…
                   } @else {
-                    <i class="bi bi-check-circle me-2"></i>
-                    Update Product
+                    <i class="bi bi-check-circle me-2"></i>Update Stock
                   }
                 </button>
               </div>
@@ -153,39 +121,89 @@
         </div>
       </div>
 
-      <!-- Sidebar - Current Info -->
+      <!-- Sidebar: Image upload + current info -->
       <div class="col-lg-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-white border-0 py-3">
+        <!-- Current info -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white border-0">
             <h6 class="mb-0 fw-bold">
-              <i class="bi bi-info-circle me-2 text-warning"></i>
-              Current Information
+              <i class="bi bi-info-circle me-2 text-warning"></i>Current Info
             </h6>
           </div>
           <div class="card-body">
-            <div class="mb-3">
-              <small class="text-muted d-block mb-1">Current Price</small>
-              <div class="fw-bold text-primary fs-5">
-                {{ productData.price | customCurrency }}
-              </div>
+            <div class="mb-2">
+              <small class="text-muted d-block">Price</small>
+              <div class="fw-bold text-primary fs-5">{{ productData.price | customCurrency }}</div>
             </div>
-
-            <div class="mb-3">
-              <small class="text-muted d-block mb-1">Current Inventory</small>
-              <div class="fw-bold">
-                {{ productData.productInventory }} units
-              </div>
+            <div class="mb-2">
+              <small class="text-muted d-block">Stock</small>
+              <div class="fw-bold">{{ productData.stockQuantity }} units</div>
             </div>
-
             @if (productData.category) {
-              <div class="mb-3">
-                <small class="text-muted d-block mb-1">Category</small>
+              <div class="mb-2">
+                <small class="text-muted d-block">Category</small>
                 <span class="badge bg-info">{{ productData.category }}</span>
               </div>
+            }
+            @if (productData.sku) {
+              <div>
+                <small class="text-muted d-block">SKU</small>
+                <span class="fw-semibold">{{ productData.sku }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Image management -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-0">
+            <h6 class="mb-0 fw-bold">
+              <i class="bi bi-image me-2 text-warning"></i>Product Image
+            </h6>
+          </div>
+          <div class="card-body text-center">
+            <!-- Current / preview image -->
+            @if (imagePreview) {
+              <img [src]="imagePreview" class="img-fluid rounded mb-2"
+                style="max-height:180px;">
+              <small class="text-muted d-block mb-2">Preview (not yet uploaded)</small>
+            } @else if (productData.imageUrl) {
+              <img [src]="productData.imageUrl" class="img-fluid rounded mb-2"
+                style="max-height:180px;">
+            } @else {
+              <div class="bg-light rounded p-4 mb-2">
+                <i class="bi bi-image fs-1 text-muted"></i>
+                <p class="text-muted small mb-0 mt-1">No image</p>
+              </div>
+            }
+
+            <!-- Select file -->
+            <label class="btn btn-outline-primary btn-sm w-100 mb-2">
+              <i class="bi bi-upload me-1"></i>Choose Image
+              <input type="file" class="d-none" accept="image/*"
+                (change)="onImageSelect($event)">
+            </label>
+
+            @if (selectedImageFile) {
+              <button class="btn btn-success btn-sm w-100 mb-2"
+                (click)="uploadImage()" [disabled]="isUploadingImage">
+                @if (isUploadingImage) {
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Upload
+              </button>
+            }
+
+            @if (productData.imageUrl) {
+              <button class="btn btn-outline-danger btn-sm w-100"
+                (click)="removeImage()">
+                <i class="bi bi-trash me-1"></i>Remove Image
+              </button>
             }
           </div>
         </div>
       </div>
     </div>
   }
+
 </div>

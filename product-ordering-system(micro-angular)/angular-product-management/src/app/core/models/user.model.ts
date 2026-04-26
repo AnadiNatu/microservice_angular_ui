@@ -4,11 +4,14 @@ export enum UserRole{
 }
 
 export interface User{
+    profilePicture: any;
+    provider: string;
     id : number;
     fname : string;
     lname : string;
+    username : string;
     email : string;
-    role : UserRole;
+    roles : UserRole;
     phoneNumber ?: string;
     avatar ?: string;
 }
@@ -35,10 +38,12 @@ export interface SignUpDTO{
 
 export interface ForgotPasswordRequest {
     email : string;
+    method : string;
 }
 
 export interface ResetPasswordRequest{
-    email : string;
-    token : string;
+    [x: string]: string | number | boolean;
+    identifier : string;
+    otp : string;
     newPassword : string;
 }

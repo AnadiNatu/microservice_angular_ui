@@ -14,117 +14,93 @@ import { CustomCurrencyPipe } from '../../../../shared/pipes/custom-currency.pip
   imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule , ReactiveFormsModule],
 })
 export class ResetPasswordComponent {
-  resetPasswordForm: FormGroup;
-  isLoading: boolean = false;
-  successMessage: string = '';
-  errorMessage: string = '';
-  showPassword: boolean = false;
-  showConfirmPassword: boolean = false;
-
+  resetPasswordForm  : FormGroup;
+  isLoading            = false;
+  successMessage       = '';
+  errorMessage         = '';
+  showPassword         = false;
+  showConfirmPassword  = false;
+ 
   constructor(
-    private fb: FormBuilder,
+    private fb         : FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router     : Router
   ) {
-    this.resetPasswordForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      token: ['', [Validators.required, Validators.minLength(6)]],
-      newPassword: ['', [Validators.required, Validators.minLength(6)]],
-      confirmPassword: ['', [Validators.required]]
-    }, {
-      validators: this.passwordMatchValidator
-    });
+    this.resetPasswordForm = this.fb.group(
+      {
+        // "identifier" = email or phone; "otp" = 6-digit code from email/SMS
+        identifier  : ['', [Validators.required]],
+        otp         : ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
+        newPassword : ['', [Validators.required, Validators.minLength(8)]],
+        confirmPassword: ['', Validators.required],
+      },
+      { validators: this.passwordMatchValidator }
+    );
   }
-
-  private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.get('newPassword');
-    const confirmPassword = control.get('confirmPassword');
-
-    if (!password || !confirmPassword) {
-      return null;
-    }
-
-    return password.value === confirmPassword.value ? null : { passwordMismatch: true };
-  }
-
+ 
   onSubmit(): void {
     if (this.resetPasswordForm.invalid) {
-      Object.keys(this.resetPasswordForm.controls).forEach(key => {
-        this.resetPasswordForm.get(key)?.markAsTouched();
-      });
+      Object.values(this.resetPasswordForm.controls).forEach(c => c.markAsTouched());
       return;
     }
-
-    const request: ResetPasswordRequest = {
-      email: this.resetPasswordForm.value.email,
-      token: this.resetPasswordForm.value.token,
-      newPassword: this.resetPasswordForm.value.newPassword
+ 
+    const v = this.resetPasswordForm.value;
+    const req: ResetPasswordRequest = {
+      identifier : v.identifier.trim(),
+      otp        : v.otp.trim(),
+      newPassword: v.newPassword,
     };
-
-    this.isLoading = true;
-    this.errorMessage = '';
+ 
+    this.isLoading      = true;
+    this.errorMessage   = '';
     this.successMessage = '';
-
-    this.authService.resetPassword(request).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.successMessage = 'Password reset successfully! Redirecting to login...';
-        console.log('Password reset successful');
-        
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          this.router.navigate(['/auth/login']);
-        }, 2000);
+ 
+    // POST /api/password/reset?identifier=...&otp=...&newPassword=...
+    this.authService.resetPassword(req).subscribe({
+      next: res => {
+        this.isLoading      = false;
+        this.successMessage = res?.message ?? 'Password reset successfully!';
+        setTimeout(() => this.router.navigate(['/auth/login']), 2500);
       },
-      error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = error.message || 'Failed to reset password. Please check your token and try again.';
-        console.error('Reset password error:', error);
+      error: err => {
+        this.isLoading    = false;
+        this.errorMessage = err?.error?.message ?? err?.message ?? 'Reset failed. Check your OTP.';
       }
     });
   }
-
-  togglePasswordVisibility(field: 'password' | 'confirmPassword'): void {
-    if (field === 'password') {
-      this.showPassword = !this.showPassword;
-    } else {
-      this.showConfirmPassword = !this.showConfirmPassword;
-    }
+ 
+  private passwordMatchValidator(g: AbstractControl): ValidationErrors | null {
+    const pw  = g.get('newPassword');
+    const cpw = g.get('confirmPassword');
+    if (!pw || !cpw) return null;
+    return pw.value === cpw.value ? null : { passwordMismatch: true };
   }
-
-  hasError(fieldName: string): boolean {
-    const field = this.resetPasswordForm.get(fieldName);
-    return !!(field && field.invalid && field.touched);
+ 
+  togglePasswordVisibility(f: 'password' | 'confirmPassword'): void {
+    if (f === 'password') this.showPassword = !this.showPassword;
+    else this.showConfirmPassword = !this.showConfirmPassword;
   }
-
-  getErrorMessage(fieldName: string): string {
-    const field = this.resetPasswordForm.get(fieldName);
-    
-    if (field?.hasError('required')) {
-      return `${this.getFieldLabel(fieldName)} is required`;
-    }
-    if (field?.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-    if (field?.hasError('minlength')) {
-      const minLength = field.errors?.['minlength'].requiredLength;
-      return `${this.getFieldLabel(fieldName)} must be at least ${minLength} characters`;
-    }
-    
+ 
+  hasError(field: string): boolean {
+    const c = this.resetPasswordForm.get(field);
+    return !!(c && c.invalid && c.touched);
+  }
+ 
+  getErrorMessage(field: string): string {
+    const c = this.resetPasswordForm.get(field);
+    if (c?.hasError('required'))   return `${this.label(field)} is required`;
+    if (c?.hasError('minlength'))  return `At least ${c.errors?.['minlength'].requiredLength} characters`;
+    if (c?.hasError('maxlength'))  return 'OTP must be 6 digits';
     return '';
   }
-
-  private getFieldLabel(fieldName: string): string {
-    const labels: { [key: string]: string } = {
-      email: 'Email',
-      token: 'Reset token',
-      newPassword: 'New password',
-      confirmPassword: 'Confirm password'
+ 
+  private label(f: string): string {
+    const m: Record<string,string> = {
+      identifier: 'Email or phone', otp: 'OTP',
+      newPassword: 'New password', confirmPassword: 'Confirm password'
     };
-    return labels[fieldName] || fieldName;
+    return m[f] ?? f;
   }
-
-  goToLogin(): void {
-    this.router.navigate(['/auth/login']);
-  }
+ 
+  goToLogin(): void { this.router.navigate(['/auth/login']); }
 }

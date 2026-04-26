@@ -1,13 +1,12 @@
-import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule, Routes } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
-import { HomePageComponent } from './components/home-page/home-page.component';
-import { LoginComponent } from './components/login/login.component';
-import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
-import { SignupComponent } from './components/signup/signup.component';
-
+import { CommonModule } from "@angular/common";
+import { NgModule } from "@angular/core";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { Routes, RouterModule } from "@angular/router";
+import { ForgotPasswordComponent } from "./components/forgot-password/forgot-password.component";
+import { HomePageComponent } from "./components/home-page/home-page.component";
+import { LoginComponent } from "./components/login/login.component";
+import { ResetPasswordComponent } from "./components/reset-password/reset-password.component";
+import { SignupComponent } from "./components/signup/signup.component";
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },

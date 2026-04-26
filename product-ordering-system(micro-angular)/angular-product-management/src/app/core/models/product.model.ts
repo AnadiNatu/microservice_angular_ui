@@ -3,6 +3,8 @@ export interface Product {
   productName: string;
   productDesc: string;
   productInventory: number;
+  active : boolean;
+  stockQuantity : number;
   price: number;
   category?: string;
   image?: string;
