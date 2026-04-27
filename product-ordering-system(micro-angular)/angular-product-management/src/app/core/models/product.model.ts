@@ -1,13 +1,16 @@
 export interface Product {
   productId: number;
   productName: string;
-  productDesc: string;
-  productInventory: number;
-  active : boolean;
-  stockQuantity : number;
+  productDesc?: string;       // kept for backward compat; backend uses description
+  description?: string;       // backend field
+  productInventory?: number;  // kept for backward compat; backend uses stockQuantity
+  stockQuantity?: number;     // backend field
+  active?: boolean;
   price: number;
   category?: string;
   image?: string;
+  imageUrl?: string;          // backend field
+  sku?: string;
   productOrderIds?: number[];
 }
 
@@ -25,27 +28,36 @@ export interface UpdateProductDTO {
   price: number;
 }
 
-export enum OrderStatus{
-     ORDERED = 'ORDERED',
+export enum OrderStatus {
+  ORDERED    = 'ORDERED',
   DISPATCHED = 'DISPATCHED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  PENDING = 'PENDING',
-  SHIPPED = 'SHIPPED',
-  COMPLETED = 'COMPLETED'
+  DELIVERED  = 'DELIVERED',
+  CANCELLED  = 'CANCELLED',
+  PENDING    = 'PENDING',
+  SHIPPED    = 'SHIPPED',
+  COMPLETED  = 'COMPLETED'
 }
 
 export interface Order {
-  orderId: number;
-  orderDate: Date;
-  orderQuantity: number;
-  estimateDeliveryDate: Date;
-  deliveryDate: Date;
-  orderStatus: OrderStatus;
-  userName: string;
-  userId: number;
-  productName: string;
-  productId: number;
+  orderId        : number;
+  orderNumber   ?: string;
+  orderDate     ?: any;
+  orderQuantity ?: number;
+  estimateDeliveryDate?: any;
+  deliveryDate  ?: any;
+  orderStatus    : any;
+  userName      ?: string;   // old field
+  username      ?: string;   // backend field
+  userId         : number;
+  productName   ?: string;
+  productId     ?: number;
+  productIds    ?: number[];
+  quantities    ?: number[];
+  totalAmount   ?: number;
+  shippingAddress?: string;
+  notes         ?: string;
+  createdOn     ?: string;
+  updatedOn     ?: string;
 }
 
 export interface OrderItem {
@@ -73,4 +85,4 @@ export interface OrderLogDTO {
   deliveredOn: Date;
   productInventory: number;
   productOrderQuantity: number;
-} 
+}

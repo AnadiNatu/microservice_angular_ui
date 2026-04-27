@@ -11,30 +11,30 @@ import { getStockBadge } from "../../../../core/modules/product.model";
   selector: 'app-product-list',
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.css'],
-  standalone : true , 
-  imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule ,  ReactiveFormsModule],
+  standalone: true,
+  imports: [FormsModule, CommonModule, CustomCurrencyPipe, RouterModule, ReactiveFormsModule],
 })
 export class ProductListComponent implements OnInit {
-   products        : Product[] = [];
+  products        : Product[] = [];
   filteredProducts: Product[] = [];
   searchTerm       = '';
   selectedCategory = 'all';
   isLoading        = true;
   errorMsg         = '';
- 
+
   categories = ['all', 'Electronics', 'Accessories', 'Furniture', 'Clothing', 'Books', 'E2E'];
- 
+
   constructor(
     private adminService: AdminService,
     private router      : Router
   ) {}
- 
+
   ngOnInit(): void { this.loadProducts(); }
- 
+
   loadProducts(): void {
     this.isLoading = true;
     this.errorMsg  = '';
- 
+
     this.adminService.getAllProducts().subscribe({
       next: products => {
         this.products         = products;
@@ -48,48 +48,36 @@ export class ProductListComponent implements OnInit {
       }
     });
   }
- 
-  // ── Filtering ─────────────────────────────────────────────
- 
+
   searchProducts(): void {
     const term = this.searchTerm.toLowerCase().trim();
     this.filteredProducts = this.products.filter(p => {
+      // support both old (productDesc) and new (description) field names
+      const desc = (p.description ?? p.productDesc ?? '').toLowerCase();
       const matchSearch =
-        p.productName.toLowerCase().includes(term) ||
-        (p.productDesc ?? '').toLowerCase().includes(term);
+        p.productName.toLowerCase().includes(term) || desc.includes(term);
       const matchCat =
         this.selectedCategory === 'all' || p.category === this.selectedCategory;
       return matchSearch && matchCat;
     });
   }
- 
+
   filterByCategory(): void { this.searchProducts(); }
- 
+
   clearFilters(): void {
     this.searchTerm       = '';
     this.selectedCategory = 'all';
     this.filteredProducts = this.products;
   }
- 
-  // ── Actions ───────────────────────────────────────────────
- 
-  /**
-   * Navigate to update page by productId.
-   * Route: /admin/update-product/:id
-   */
+
   updateProduct(productId: number): void {
     this.router.navigate(['/admin/update-product', productId]);
   }
- 
-  /**
-   * Deactivate product (backend has no hard-delete; soft-deactivate instead).
-   * Calls PUT /api/products/{id}/deactivate
-   */
+
   deactivateProduct(product: Product): void {
-    const msg =
-      `Deactivate "${product.productName}"?\n\nThe product will be hidden from users.`;
+    const msg = `Deactivate "${product.productName}"?\n\nThe product will be hidden from users.`;
     if (!confirm(msg)) return;
- 
+
     this.adminService.deactivateProduct(product.productId).subscribe({
       next: () => {
         this.showToast('Product deactivated successfully');
@@ -100,20 +88,17 @@ export class ProductListComponent implements OnInit {
       }
     });
   }
- 
+
   createNewProduct(): void {
     this.router.navigate(['/admin/create-product']);
   }
- 
+
   goBack(): void {
     this.router.navigate(['/admin/dashboard']);
   }
- 
-  // ── UI helpers ────────────────────────────────────────────
- 
-  // Backend field: stockQuantity  (was productInventory)
+
   getStockBadge = getStockBadge;
- 
+
   private showToast(msg: string): void {
     const el = document.createElement('div');
     el.className =

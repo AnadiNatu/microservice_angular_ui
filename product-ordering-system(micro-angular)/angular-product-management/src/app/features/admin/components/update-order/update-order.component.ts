@@ -10,27 +10,26 @@ import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pip
   selector: 'app-update-order',
   templateUrl: './update-order.component.html',
   styleUrls: ['./update-order.component.css'],
-  standalone : true , 
-  imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule ,  ReactiveFormsModule],
+  standalone: true,
+  imports: [FormsModule, CommonModule, CustomCurrencyPipe, RouterModule, ReactiveFormsModule],
 })
 export class UpdateOrderComponent implements OnInit {
   orderForm!: FormGroup;
   orderData!: Order;
   orderId!: number;
-  isLoading: boolean = true;
-  isSubmitting: boolean = false;
+  isLoading    = true;
+  isSubmitting = false;
 
-  statusOptions = ['ORDERED', 'DISPATCHED', 'DELIVERED', 'CANCELLED', 'PENDING', 'SHIPPED'];
+  statusOptions = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
 
   constructor(
-    private route: ActivatedRoute,
-    private fb: FormBuilder,
+    private route       : ActivatedRoute,
+    private fb          : FormBuilder,
     private adminService: AdminService,
-    private router: Router
+    private router      : Router
   ) {}
 
   ngOnInit(): void {
-    // Get order ID from route
     const idParam = this.route.snapshot.paramMap.get('orderId');
     this.orderId = idParam ? +idParam : 0;
 
@@ -42,16 +41,13 @@ export class UpdateOrderComponent implements OnInit {
     }
   }
 
-  /**
-   * Load order data
-   */
   private loadOrder(): void {
     this.isLoading = true;
 
     this.adminService.getAllOrders().subscribe({
       next: (orders) => {
         const order = orders.find(o => o.orderId === this.orderId);
-        
+
         if (order) {
           this.orderData = order;
           this.initializeForm(order);
@@ -70,37 +66,35 @@ export class UpdateOrderComponent implements OnInit {
     });
   }
 
-  /**
-   * Initialize form with order data
-   */
   private initializeForm(order: Order): void {
+    // Derive display-friendly values from the new Order shape
+    const productLabel   = order.productName ?? (order.productIds?.join(', ') ?? '');
+    const customerLabel  = order.username ?? order.userName ?? `User #${order.userId}`;
+    const qty            = order.orderQuantity ?? (order.quantities?.[0] ?? 0);
+
     this.orderForm = this.fb.group({
-      orderId: [{ value: order.orderId, disabled: true }],
-      orderDate: [{ value: this.formatDateForInput(order.orderDate), disabled: true }],
-      productName: [{ value: order.productName, disabled: true }],
-      userName: [{ value: order.userName, disabled: true }],
-      userId: [{ value: order.userId, disabled: true }],
-      orderQuantity: [order.orderQuantity, [Validators.required, Validators.min(1)]],
-      estimateDeliveryDate: [this.formatDateForInput(order.estimateDeliveryDate), Validators.required],
-      deliveryDate: [this.formatDateForInput(order.deliveryDate), Validators.required],
-      orderStatus: [order.orderStatus, Validators.required]
+      orderId     : [{ value: order.orderId,                                  disabled: true }],
+      orderDate   : [{ value: this.formatDateForInput(order.orderDate),        disabled: true }],
+      productName : [{ value: productLabel,                                    disabled: true }],
+      userName    : [{ value: customerLabel,                                   disabled: true }],
+      userId      : [{ value: order.userId,                                   disabled: true }],
+      orderQuantity         : [qty, [Validators.required, Validators.min(1)]],
+      estimateDeliveryDate  : [this.formatDateForInput(order.estimateDeliveryDate), Validators.required],
+      deliveryDate          : [this.formatDateForInput(order.deliveryDate),         Validators.required],
+      orderStatus           : [order.orderStatus, Validators.required],
     });
   }
 
-  /**
-   * Format date for input[type="date"]
-   */
-  private formatDateForInput(date: Date): string {
+  private formatDateForInput(date: any): string {
+    if (!date) return '';
     const d = new Date(date);
-    const year = d.getFullYear();
+    if (isNaN(d.getTime())) return '';
+    const year  = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const day   = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
-  /**
-   * Handle form submission
-   */
   onSubmit(): void {
     if (this.orderForm.invalid) {
       Object.keys(this.orderForm.controls).forEach(key => {
@@ -113,13 +107,14 @@ export class UpdateOrderComponent implements OnInit {
 
     const updatedOrder: Order = {
       ...this.orderData,
-      orderQuantity: this.orderForm.get('orderQuantity')?.value,
+      orderQuantity       : this.orderForm.get('orderQuantity')?.value,
       estimateDeliveryDate: new Date(this.orderForm.get('estimateDeliveryDate')?.value),
-      deliveryDate: new Date(this.orderForm.get('deliveryDate')?.value),
-      orderStatus: this.orderForm.get('orderStatus')?.value as any
+      deliveryDate        : new Date(this.orderForm.get('deliveryDate')?.value),
+      orderStatus         : this.orderForm.get('orderStatus')?.value,
     };
 
-    this.adminService.updateOrder(updatedOrder).subscribe({
+    // Backend only supports status updates; call updateOrderStatus directly
+    this.adminService.updateOrderStatus(updatedOrder.orderId, updatedOrder.orderStatus).subscribe({
       next: () => {
         console.log('Order updated successfully');
         this.isSubmitting = false;
@@ -134,33 +129,18 @@ export class UpdateOrderComponent implements OnInit {
     });
   }
 
-  /**
-   * Check if field has error
-   */
   hasError(fieldName: string): boolean {
     const field = this.orderForm?.get(fieldName);
     return !!(field && field.invalid && field.touched);
   }
 
-  /**
-   * Get error message
-   */
   getErrorMessage(fieldName: string): string {
     const field = this.orderForm?.get(fieldName);
-    
-    if (field?.hasError('required')) {
-      return 'This field is required';
-    }
-    if (field?.hasError('min')) {
-      return 'Quantity must be at least 1';
-    }
-    
+    if (field?.hasError('required')) return 'This field is required';
+    if (field?.hasError('min'))      return 'Quantity must be at least 1';
     return '';
   }
 
-  /**
-   * Cancel and go back
-   */
   cancel(): void {
     this.router.navigate(['/admin/orders']);
   }

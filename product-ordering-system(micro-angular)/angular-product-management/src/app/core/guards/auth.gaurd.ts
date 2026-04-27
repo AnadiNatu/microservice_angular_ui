@@ -1,11 +1,10 @@
-// src/app/core/guards/auth.guard.ts
-import { Injectable }          from '@angular/core';
+import { Injectable } from '@angular/core';
 import {
   CanActivate, ActivatedRouteSnapshot,
   RouterStateSnapshot, Router, UrlTree
-}                              from '@angular/router';
-import { AuthService }         from '../services/auth.service';
-import { UserRole }            from '../models/user.model';
+} from '@angular/router';
+import { AuthService } from '../services/auth.service';
+import { UserRole } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthGuard implements CanActivate {
@@ -34,11 +33,9 @@ export class AuthGuard implements CanActivate {
       const userRoles = this.authService.getCurrentUser()?.roles ?? [];
 
       if (!userRoles.includes(expectedRole)) {
-        // Redirect to the appropriate landing page for the actual role
         if (userRoles.includes(UserRole.ADMIN)) {
           return this.router.createUrlTree(['/admin/dashboard']);
         }
-        // Default fallback – back to login
         return this.router.createUrlTree(['/auth/login']);
       }
     }

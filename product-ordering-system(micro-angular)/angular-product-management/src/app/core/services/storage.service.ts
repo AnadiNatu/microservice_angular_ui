@@ -40,6 +40,10 @@ export class StorageService {
     localStorage.removeItem(this.REFRESH_KEY);
   }
 
+  logout(): void {
+    this.clear();
+  }
+
   isAuthenticated(): boolean {
     return !!this.getToken() && !!this.getUser();
   }

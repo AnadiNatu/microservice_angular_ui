@@ -16,11 +16,10 @@ import { ProductService } from "../../../../core/services/product.service";
   imports : [FormsModule , CommonModule , CustomCurrencyPipe , RouterModule ,  ReactiveFormsModule],
 })
 export class CreateProductComponent {
- productForm : FormGroup;
+  productForm : FormGroup;
   isSubmitting = false;
   errorMsg     = '';
  
-  // Selected image for upload AFTER product creation
   selectedImageFile: File | null = null;
   imagePreview     : string | null = null;
  
@@ -34,17 +33,12 @@ export class CreateProductComponent {
     private router        : Router
   ) {
     this.productForm = this.fb.group({
-      // Backend field: productName
+      // All field names match backend CreateProductDto exactly
       productName  : ['', [Validators.required, Validators.minLength(3)]],
-      // Backend field: description  (was productDesc)
       description  : ['', [Validators.required, Validators.minLength(10)]],
-      // Backend field: price
-      price        : [0, [Validators.required, Validators.min(0.01)]],
-      // Backend field: stockQuantity  (was productInventory)
-      stockQuantity: [0, [Validators.required, Validators.min(0)]],
-      // Backend field: category
+      price        : [0,  [Validators.required, Validators.min(0.01)]],
+      stockQuantity: [0,  [Validators.required, Validators.min(0)]],
       category     : ['Electronics', Validators.required],
-      // Backend field: sku  (optional)
       sku          : [''],
     });
   }
@@ -72,7 +66,7 @@ export class CreateProductComponent {
     this.isSubmitting = true;
     this.errorMsg     = '';
  
-    const v = this.productForm.value;
+    const v             = this.productForm.value;
     const currentUserId = this.authService.getCurrentUser()?.id;
  
     const dto: CreateProductRequest = {
@@ -87,12 +81,11 @@ export class CreateProductComponent {
  
     this.adminService.createProduct(dto).subscribe({
       next: product => {
-        // If an image was selected, upload it right after creation
         if (this.selectedImageFile) {
           this.productService.uploadProductImage(product.productId, this.selectedImageFile)
             .subscribe({
               next : () => this.finishCreate(),
-              error: () => this.finishCreate(), // image upload failure is non-fatal
+              error: () => this.finishCreate(),
             });
         } else {
           this.finishCreate();
@@ -125,9 +118,12 @@ export class CreateProductComponent {
   }
  
   private label(f: string): string {
-    const m: Record<string,string> = {
-      productName: 'Product name', description: 'Description',
-      price: 'Price', stockQuantity: 'Stock quantity', category: 'Category'
+    const m: Record<string, string> = {
+      productName  : 'Product name',
+      description  : 'Description',
+      price        : 'Price',
+      stockQuantity: 'Stock quantity',
+      category     : 'Category',
     };
     return m[f] ?? f;
   }

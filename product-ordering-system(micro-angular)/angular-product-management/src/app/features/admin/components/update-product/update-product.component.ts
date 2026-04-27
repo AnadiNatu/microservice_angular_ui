@@ -16,16 +16,15 @@ import { ProductService } from "../../../../core/services/product.service";
 })
 export class UpdateProductComponent implements OnInit {
   
-  productForm !: FormGroup;
-  productData !: Product;
+  productForm!: FormGroup;
+  productData!: Product;
   isLoading    = true;
   isSubmitting = false;
   errorMsg     = '';
   successMsg   = '';
  
-  // Image
-  selectedImageFile : File | null = null;
-  imagePreview      : string | null = null;
+  selectedImageFile: File | null = null;
+  imagePreview     : string | null = null;
   isUploadingImage  = false;
  
   constructor(
@@ -37,10 +36,10 @@ export class UpdateProductComponent implements OnInit {
   ) {}
  
   ngOnInit(): void {
-    // Route param is now productId (number), not product name
-    const idParam = this.route.snapshot.paramMap.get('id') ??
-                    this.route.snapshot.paramMap.get('name'); // backward compat
-    const productId = idParam ? Number(idParam) : NaN;
+    // Route is /admin/update-product/:id  (number id)
+    const raw = this.route.snapshot.paramMap.get('id')
+             ?? this.route.snapshot.paramMap.get('name');
+    const productId = raw ? Number(raw) : NaN;
  
     if (isNaN(productId)) {
       alert('Invalid product ID');
@@ -68,29 +67,12 @@ export class UpdateProductComponent implements OnInit {
   private initForm(p: Product): void {
     this.productForm = this.fb.group({
       productId  : [{ value: p.productId,   disabled: true }],
-      productName: [{ value: p.productName, disabled: true }], // name is immutable
-      // Editable fields
-      description  : [p.productDesc ?? '',   [Validators.required, Validators.minLength(10)]],
-      price        : [p.price,                [Validators.required, Validators.min(0.01)]],
-      // stockQuantity is updated via dedicated PUT /api/products/{id}/stock
-      stockQuantity: [p.stockQuantity ?? 0,  [Validators.required, Validators.min(0)]],
+      productName: [{ value: p.productName, disabled: true }],
+      // stockQuantity is the only editable field via PUT /api/products/{id}/stock
+      stockQuantity: [p.stockQuantity ?? 0, [Validators.required, Validators.min(0)]],
     });
   }
  
-  // ── Submit (stock update) ─────────────────────────────────
- 
-  /**
-   * Backend does NOT have a generic PUT /api/products/{id} to update
-   * description + price + stock in one call.
-   * Available operations:
-   *   PUT /api/products/{id}/stock?quantity=N
-   *   PUT /api/products/{id}/deactivate
-   *   POST /api/products/{id}/image
-   *
-   * We update stock via the dedicated endpoint.
-   * Description / price changes require a new product creation in this backend.
-   * A TODO note is displayed in the UI.
-   */
   onSubmit(): void {
     if (this.productForm.invalid) {
       Object.values(this.productForm.controls).forEach(c => c.markAsTouched());
@@ -98,24 +80,22 @@ export class UpdateProductComponent implements OnInit {
     }
     this.isSubmitting = true;
     this.errorMsg     = '';
+    this.successMsg   = '';
  
     const newStock = Number(this.productForm.get('stockQuantity')?.value);
  
-    this.adminService.updateProductStock(this.productData.productId, newStock)
-      .subscribe({
-        next: updated => {
-          this.productData      = updated;
-          this.isSubmitting     = false;
-          this.successMsg       = 'Stock updated successfully!';
-        },
-        error: err => {
-          this.isSubmitting = false;
-          this.errorMsg     = err?.error?.message ?? 'Stock update failed.';
-        }
-      });
+    this.adminService.updateProductStock(this.productData.productId, newStock).subscribe({
+      next: updated => {
+        this.productData  = updated;
+        this.isSubmitting = false;
+        this.successMsg   = 'Stock updated successfully!';
+      },
+      error: err => {
+        this.isSubmitting = false;
+        this.errorMsg     = err?.error?.message ?? 'Stock update failed.';
+      }
+    });
   }
- 
-  // ── Image upload ──────────────────────────────────────────
  
   onImageSelect(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
@@ -130,20 +110,19 @@ export class UpdateProductComponent implements OnInit {
     if (!this.selectedImageFile) return;
     this.isUploadingImage = true;
  
-    this.adminService.uploadProductImage(this.productData.productId, this.selectedImageFile)
-      .subscribe({
-        next: updated => {
-          this.productData       = updated;
-          this.isUploadingImage  = false;
-          this.selectedImageFile = null;
-          this.imagePreview      = null;
-          this.successMsg        = 'Image uploaded!';
-        },
-        error: err => {
-          this.isUploadingImage = false;
-          this.errorMsg = err?.error?.message ?? 'Image upload failed.';
-        }
-      });
+    this.adminService.uploadProductImage(this.productData.productId, this.selectedImageFile).subscribe({
+      next: updated => {
+        this.productData       = updated;
+        this.isUploadingImage  = false;
+        this.selectedImageFile = null;
+        this.imagePreview      = null;
+        this.successMsg        = 'Image uploaded!';
+      },
+      error: err => {
+        this.isUploadingImage = false;
+        this.errorMsg = err?.error?.message ?? 'Image upload failed.';
+      }
+    });
   }
  
   removeImage(): void {
@@ -159,8 +138,6 @@ export class UpdateProductComponent implements OnInit {
     });
   }
  
-  // ── UI helpers ────────────────────────────────────────────
- 
   hasError(field: string): boolean {
     const c = this.productForm?.get(field);
     return !!(c && c.invalid && c.touched);
@@ -168,9 +145,8 @@ export class UpdateProductComponent implements OnInit {
  
   getErrorMessage(field: string): string {
     const c = this.productForm?.get(field);
-    if (c?.hasError('required'))  return 'This field is required';
-    if (c?.hasError('minlength')) return `At least ${c.errors?.['minlength'].requiredLength} characters`;
-    if (c?.hasError('min'))       return `Must be ≥ ${c.errors?.['min'].min}`;
+    if (c?.hasError('required')) return 'This field is required';
+    if (c?.hasError('min'))      return `Must be ≥ ${c.errors?.['min'].min}`;
     return '';
   }
  
