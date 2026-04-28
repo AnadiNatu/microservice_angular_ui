@@ -16,17 +16,17 @@ import { ProductService } from "../../../../core/services/product.service";
 })
 export class UpdateProductComponent implements OnInit {
   
-  productForm!: FormGroup;
-  productData!: Product;
+  productForm !: FormGroup;
+  productData !: Product;
   isLoading    = true;
   isSubmitting = false;
   errorMsg     = '';
   successMsg   = '';
- 
-  selectedImageFile: File | null = null;
-  imagePreview     : string | null = null;
+
+  selectedImageFile : File | null = null;
+  imagePreview      : string | null = null;
   isUploadingImage  = false;
- 
+
   constructor(
     private route         : ActivatedRoute,
     private fb            : FormBuilder,
@@ -34,13 +34,13 @@ export class UpdateProductComponent implements OnInit {
     private adminService  : AdminService,
     private router        : Router
   ) {}
- 
+
   ngOnInit(): void {
-    // Route is /admin/update-product/:id  (number id)
-    const raw = this.route.snapshot.paramMap.get('id')
-             ?? this.route.snapshot.paramMap.get('name');
-    const productId = raw ? Number(raw) : NaN;
- 
+    // Route param may be named 'name' (old) or 'id' (new) — handle both
+    const idParam = this.route.snapshot.paramMap.get('id') ??
+                    this.route.snapshot.paramMap.get('name');
+    const productId = idParam ? Number(idParam) : NaN;
+
     if (isNaN(productId)) {
       alert('Invalid product ID');
       this.router.navigate(['/admin/products']);
@@ -48,7 +48,7 @@ export class UpdateProductComponent implements OnInit {
     }
     this.loadProduct(productId);
   }
- 
+
   private loadProduct(id: number): void {
     this.productService.getProduct(id).subscribe({
       next: product => {
@@ -63,16 +63,19 @@ export class UpdateProductComponent implements OnInit {
       }
     });
   }
- 
+
   private initForm(p: Product): void {
+    // Support both old field names (productDesc, productInventory) and new ones
+    const description  = p.description  ?? p.productDesc    ?? '';
+    const stockQty     = p.stockQuantity ?? p.productInventory ?? 0;
+
     this.productForm = this.fb.group({
       productId  : [{ value: p.productId,   disabled: true }],
       productName: [{ value: p.productName, disabled: true }],
-      // stockQuantity is the only editable field via PUT /api/products/{id}/stock
-      stockQuantity: [p.stockQuantity ?? 0, [Validators.required, Validators.min(0)]],
+      stockQuantity: [stockQty, [Validators.required, Validators.min(0)]],
     });
   }
- 
+
   onSubmit(): void {
     if (this.productForm.invalid) {
       Object.values(this.productForm.controls).forEach(c => c.markAsTouched());
@@ -80,10 +83,9 @@ export class UpdateProductComponent implements OnInit {
     }
     this.isSubmitting = true;
     this.errorMsg     = '';
-    this.successMsg   = '';
- 
+
     const newStock = Number(this.productForm.get('stockQuantity')?.value);
- 
+
     this.adminService.updateProductStock(this.productData.productId, newStock).subscribe({
       next: updated => {
         this.productData  = updated;
@@ -96,7 +98,7 @@ export class UpdateProductComponent implements OnInit {
       }
     });
   }
- 
+
   onImageSelect(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -105,11 +107,11 @@ export class UpdateProductComponent implements OnInit {
     reader.onload = e => { this.imagePreview = e.target?.result as string; };
     reader.readAsDataURL(file);
   }
- 
+
   uploadImage(): void {
     if (!this.selectedImageFile) return;
     this.isUploadingImage = true;
- 
+
     this.adminService.uploadProductImage(this.productData.productId, this.selectedImageFile).subscribe({
       next: updated => {
         this.productData       = updated;
@@ -124,7 +126,7 @@ export class UpdateProductComponent implements OnInit {
       }
     });
   }
- 
+
   removeImage(): void {
     if (!confirm('Remove product image?')) return;
     this.adminService.deleteProductImage(this.productData.productId).subscribe({
@@ -137,18 +139,32 @@ export class UpdateProductComponent implements OnInit {
       }
     });
   }
- 
+
   hasError(field: string): boolean {
     const c = this.productForm?.get(field);
     return !!(c && c.invalid && c.touched);
   }
- 
+
   getErrorMessage(field: string): string {
     const c = this.productForm?.get(field);
-    if (c?.hasError('required')) return 'This field is required';
-    if (c?.hasError('min'))      return `Must be ≥ ${c.errors?.['min'].min}`;
+    if (c?.hasError('required'))  return 'This field is required';
+    if (c?.hasError('minlength')) return `At least ${c.errors?.['minlength'].requiredLength} characters`;
+    if (c?.hasError('min'))       return `Must be ≥ ${c.errors?.['min'].min}`;
     return '';
   }
- 
-  cancel(): void { this.router.navigate(['/admin/products']); }
+
+  // Helpers to read product fields regardless of old/new field name
+  get displayDescription(): string {
+    return this.productData?.description ?? this.productData?.productDesc ?? '';
+  }
+
+  get displayStock(): number {
+    return this.productData?.stockQuantity ?? this.productData?.productInventory ?? 0;
+  }
+
+  get displayImageUrl(): string | undefined {
+    return this.productData?.imageUrl ?? this.productData?.image;
+  }
+
+  cancel(): void { this.router.navigate(['/admin/products']); }; 
 }
