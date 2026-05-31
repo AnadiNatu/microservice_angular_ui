@@ -1,34 +1,24 @@
-import { NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
-import { AuthGuard } from './core/guards/auth.gaurd'; 
+import { Routes } from '@angular/router';
+import { AuthGuard } from './core/guards/auth.gaurd';
 
-const routes: Routes = [
-  { 
-    path: '', 
-    redirectTo: '/auth/home', 
-    pathMatch: 'full' 
+export const routes: Routes = [
+  {
+    path: '',
+    redirectTo: '/auth/home',
+    pathMatch: 'full'
   },
-  { 
-    path: 'auth', 
-    loadChildren: () => import('./features/auth/auth.module').then(m => m.AuthModule)
+  {
+    path: 'auth',
+    loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES)
   },
-  { 
-    path: 'admin', 
-    loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule),
+  {
+    path: 'admin',
+    loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
     canActivate: [AuthGuard],
     data: { role: 'ADMIN' }
   },
-  { 
-    path: '**', 
-    redirectTo: '/auth/home' 
+  {
+    path: '**',
+    redirectTo: '/auth/home'
   }
 ];
-
-@NgModule({
-  imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule]
-})
-export class AppRoutingModule { }
-
-// Export routes for standalone usage (if needed in future)
-export { routes };

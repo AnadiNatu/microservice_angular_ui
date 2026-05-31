@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
 })
 export class HomePageComponent {
   
-  features = [
+   features = [
     {
       icon: 'bi-box-seam',
       title: 'Product Management',
@@ -39,9 +39,6 @@ export class HomePageComponent {
     this.router.navigate(['/auth/login']);
   }
 
-  /**
-   * Navigate to signup
-   */
   goToSignup(): void {
     this.router.navigate(['/auth/signup']);
   }
