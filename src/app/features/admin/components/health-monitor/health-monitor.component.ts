@@ -1,6 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, OnDestroy, NgModule } from '@angular/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { interval, Subscription } from 'rxjs';
+import { HighlightDirective } from '../../../../shared/directives/highlight.directive';
+import { CustomCurrencyPipe } from '../../../../shared/pipes/custom-currency.pipe';
 
 
 interface ServiceStatus {
@@ -23,7 +27,8 @@ interface SystemMetrics {
 @Component({
   selector: 'app-health-monitor',
   templateUrl: './health-monitor.component.html',
-  styleUrls: ['./health-monitor.component.css']
+  styleUrls: ['./health-monitor.component.css'],
+  imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , CustomCurrencyPipe]
 })
 export class HealthMonitorComponent implements OnInit, OnDestroy {
   services: ServiceStatus[] = [];

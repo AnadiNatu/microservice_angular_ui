@@ -1,13 +1,17 @@
-import { Component, OnInit } from "@angular/core";
-import { FormGroup, FormBuilder, Validators } from "@angular/forms";
-import { ActivatedRoute, Router } from "@angular/router";
+import { Component, NgModule, OnInit } from "@angular/core";
+import { FormGroup, FormBuilder, Validators, FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { Product, UpdateProductDTO } from "../../../../core/models/product.model";
 import { AdminService } from "../../services/admin.service";
+import { CommonModule, CurrencyPipe } from "@angular/common";
+import { HighlightDirective } from "../../../../shared/directives/highlight.directive";
+import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
 
 @Component({
   selector: 'app-update-product',
   templateUrl: './update-product.component.html',
-  styleUrls: ['./update-product.component.css']
+  styleUrls: ['./update-product.component.css'],
+  imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , CustomCurrencyPipe],
 })
 export class UpdateProductComponent implements OnInit {
   productForm!: FormGroup;

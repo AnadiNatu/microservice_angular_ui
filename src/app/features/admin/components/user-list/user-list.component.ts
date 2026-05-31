@@ -1,12 +1,16 @@
-import { Component, OnInit } from "@angular/core";
-import { Router } from "@angular/router";
+import { Component, NgModule, OnInit } from "@angular/core";
+import { Router, RouterLink } from "@angular/router";
 import { User } from "../../../../core/models/user.model";
 import { AdminService } from "../../services/admin.service";
+import { CommonModule } from "@angular/common";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { HighlightDirective } from "../../../../shared/directives/highlight.directive";
 
 @Component({
   selector: 'app-user-list',
   templateUrl: './user-list.component.html',
-  styleUrls: ['./user-list.component.css']
+  styleUrls: ['./user-list.component.css'],
+  imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective],
 })
 export class UserListComponent implements OnInit {
   users: User[] = [];

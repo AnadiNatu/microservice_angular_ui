@@ -1,13 +1,20 @@
-import { Component, OnInit } from "@angular/core";
-import { Router } from "@angular/router";
+import { Component, NgModule, OnInit } from "@angular/core";
+import { Router, RouterLink } from "@angular/router";
 import { Product, Order } from "../../../../core/models/product.model";
 import { AdminService } from "../../services/admin.service";
+import { CommonModule } from "@angular/common";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { HighlightDirective } from "../../../../shared/directives/highlight.directive";
+import { HeaderComponent } from "../../../../shared/components/header/header.component";
+import { SidebarComponent } from "../../../../shared/components/sidebar/sidebar.component";
+import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
 
 
 @Component({
   selector: 'app-admin-dashboard',
   templateUrl: './admin-dashboard.component.html',
-  styleUrls: ['./admin-dashboard.component.css']
+  styleUrls: ['./admin-dashboard.component.css'],
+  imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , HeaderComponent , SidebarComponent , CustomCurrencyPipe],
 })
 export class AdminDashboardComponent implements OnInit {
   // Dashboard stats
@@ -36,7 +43,7 @@ export class AdminDashboardComponent implements OnInit {
   /**
    * Load all dashboard data
    */
-  private loadDashboardData(): void {
+  public loadDashboardData(): void {
     this.isLoading = true;
 
     // Load stats

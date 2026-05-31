@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { 
   Component, 
   OnInit, 
@@ -11,11 +12,17 @@ import {
   SimpleChanges,
   Input
 } from '@angular/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { HighlightDirective } from '../../directives/highlight.directive';
+import { HeaderComponent } from '../header/header.component';
+import { SidebarComponent } from '../sidebar/sidebar.component';
 
 @Component({
   selector: 'app-lifecycle-demo',
   templateUrl: './lifecycle-demo.component.html',
   styleUrls: ['./lifecycle-demo.component.css'],
+   imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , HeaderComponent , SidebarComponent],
   standalone: true
 })
 export class LifecycleDemoComponent 

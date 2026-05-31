@@ -1,12 +1,17 @@
-import { Component } from "@angular/core";
-import { Router } from "@angular/router";
+import { Component, NgModule } from "@angular/core";
+import { Router, RouterLink } from "@angular/router";
 import { OrderLogDTO } from "../../../../core/models/product.model";
 import { AdminService } from "../../services/admin.service";
+import { CommonModule, CurrencyPipe } from "@angular/common";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { HighlightDirective } from "../../../../shared/directives/highlight.directive";
+import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
 
 @Component({
   selector: 'app-order-logs-by-product',
   templateUrl: './order-logs-by-product.component.html',
-  styleUrls: ['./order-logs-by-product.component.css']
+  styleUrls: ['./order-logs-by-product.component.css'],
+  imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , CustomCurrencyPipe],
 })
 export class OrderLogsByProductComponent {
   productName: string = '';

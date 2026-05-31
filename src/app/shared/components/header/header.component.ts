@@ -1,26 +1,33 @@
 import { Component } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { HighlightDirective } from '../../directives/highlight.directive';
+import { SidebarComponent } from '../sidebar/sidebar.component';
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css'],
+   imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , HeaderComponent , SidebarComponent],
   standalone : true
 })
 export class HeaderComponent {
   
-  user = this.authService.userSignal;
-
   constructor(
     private authService: AuthService,
     private router: Router
   ) {
     console.log('HeaderComponent initialized, user:', this.user());
+  
+    // user = this.authService.userSignal;
   }
+  
     user(): any {
         throw new Error('Method not implemented.');
     }
+
 
   /**
    * Logout user and redirect to login

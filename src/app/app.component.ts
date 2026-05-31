@@ -1,33 +1,46 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, DoCheck } from "@angular/core";
-import { Router, NavigationStart, NavigationEnd, NavigationError } from "@angular/router";
+import { CommonModule } from "@angular/common";
+import { Component, OnInit, OnDestroy, AfterViewInit, DoCheck, ChangeDetectorRef } from "@angular/core";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { Router, NavigationStart, NavigationEnd, NavigationError, RouterLink, RouterOutlet } from "@angular/router";
 import { filter } from "rxjs";
 
 @Component({
   selector: 'app-root',
+  standalone: true,
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  styleUrls: ['./app.component.css'],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterOutlet,
+    RouterLink
+  ]
 })
-export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
-    title = 'OrderFlow Pro - Angular 17';
-  isLoading = false;
+export class AppComponent {
 
-  constructor(private router: Router) {}
+  // title = 'OrderFlow Pro - Angular 17';
 
-  ngOnInit(): void {
-    this.router.events.subscribe(event => {
-      if (event instanceof NavigationStart) {
-        this.isLoading = true;
-      }
-      if (event instanceof NavigationEnd) {
-        this.isLoading = false;
-      }
-      if (event instanceof NavigationError) {
-        this.isLoading = false;
-        console.error('Navigation error:', event.error);
-      }
-    });
-  }
+  // isLoading = false;
 
-  ngAfterViewInit(): void {}
-  ngOnDestroy(): void {}
+  // constructor(private router: Router) {}
+
+  // ngOnInit(): void {
+
+  //   this.router.events.subscribe(event => {
+
+  //     if (event instanceof NavigationStart) {
+  //       this.isLoading = true;
+  //     }
+
+  //     if (
+  //       event instanceof NavigationEnd ||
+  //       event instanceof NavigationError
+  //     ) {
+  //       this.isLoading = false;
+  //     }
+
+  //   });
+
+  // }
 }

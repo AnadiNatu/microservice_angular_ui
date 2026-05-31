@@ -1,18 +1,20 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink, RouterModule } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LoginCredentials, UserRole } from '../../../../core/models/user.model';
+import { CommonModule } from '@angular/common';
 
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
+  imports: [RouterModule, CommonModule , ReactiveFormsModule , FormsModule],
   standalone: true
 })
 export class LoginComponent implements OnInit {
-  loginForm!: FormGroup;
+  loginForm: FormGroup;
   isLoading: boolean = false;
   errorMessage: string = '';
   returnUrl: string = '';
@@ -36,29 +38,35 @@ export class LoginComponent implements OnInit {
   };
 
   constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute
-  ) {}
+  private fb: FormBuilder,
+  private authService: AuthService,
+  private router: Router,
+  private route: ActivatedRoute
+) {
+  this.loginForm = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(6)]],
+    rememberMe: [false]
+  });
+}
 
-  ngOnInit(): void {
-    if (this.authService.isLoggedIn()) {
-      this.redirectToDashboard();
-      return;
-    }
+ ngOnInit(): void {
 
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
-    this.initializeForm();
+  this.returnUrl =
+    this.route.snapshot.queryParams['returnUrl'] || '/';
+
+  if (this.authService.isLoggedIn()) {
+    this.redirectToDashboard();
   }
+}
 
-  private initializeForm(): void {
-    this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
-      rememberMe: [false]
-    });
-  }
+  // private initializeForm(): void {
+  //   this.loginForm = this.fb.group({
+  //     email: ['', [Validators.required, Validators.email]],
+  //     password: ['', [Validators.required, Validators.minLength(6)]],
+  //     rememberMe: [false]
+  //   });
+  // }
 
   onSubmit(): void {
     if (this.loginForm.invalid) {
@@ -77,24 +85,36 @@ export class LoginComponent implements OnInit {
   }
 
   private performLogin(credentials: LoginCredentials): void {
-    this.isLoading = true;
+    this.setLoadingState(true);
     this.errorMessage = '';
 
     this.authService.login(credentials).subscribe({
       next: (user) => {
-        this.isLoading = false;
-        this.showSuccessMessage(user.fname);
+        this.setLoadingState(false);
+        this.showSuccessMessage(user['username'] ?? user.email ?? 'User');
         setTimeout(() => {
           this.redirectToDashboard();
         }, 1000);
       },
       error: (error) => {
-        this.isLoading = false;
+        this.setLoadingState(false);
         this.errorMessage = error.message || 'Invalid email or password. Please try again.';
         this.shakeForm();
       }
     });
   }
+
+  private setLoadingState(loading: boolean): void {
+
+  this.isLoading = loading;
+
+  if (loading) {
+    this.loginForm.disable();
+  } else {
+    this.loginForm.enable();
+  }
+
+}
 
   quickLogin(type: 'admin' | 'user'): void {
     const credentials = this.demoCredentials[type];

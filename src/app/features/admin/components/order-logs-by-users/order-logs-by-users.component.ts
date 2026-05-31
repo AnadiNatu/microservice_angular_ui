@@ -1,12 +1,17 @@
-import { Component, OnInit } from "@angular/core";
-import { Router } from "@angular/router";
+import { Component, NgModule, OnInit } from "@angular/core";
+import { Router, RouterLink } from "@angular/router";
 import { OrderLogDTO } from "../../../../core/models/product.model";
 import { AdminService } from "../../services/admin.service";
+import { CommonModule, CurrencyPipe } from "@angular/common";
+import { FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { HighlightDirective } from "../../../../shared/directives/highlight.directive";
+import { CustomCurrencyPipe } from "../../../../shared/pipes/custom-currency.pipe";
 
 @Component({
   selector: 'app-order-logs-by-users',
   templateUrl: './order-logs-by-users.component.html',
-  styleUrls: ['./order-logs-by-users.component.css']
+  styleUrls: ['./order-logs-by-users.component.css'],
+imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective , CustomCurrencyPipe],
 })
 export class OrderLogsByUsersComponent implements OnInit {
   logs: OrderLogDTO[] = [];

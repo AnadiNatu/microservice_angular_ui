@@ -41,8 +41,7 @@
                   <button 
                     type="button"
                     class="btn btn-outline-danger w-100 btn-sm"
-                    (click)="quickLogin('admin')"
-                    [disabled]="isLoading">
+                    (click)="quickLogin('admin')">
                     <i [class]="'bi ' + demoCredentials.admin.icon + ' me-1'"></i>
                     {{ demoCredentials.admin.label }}
                   </button>
@@ -53,8 +52,7 @@
                   <button 
                     type="button"
                     class="btn btn-outline-success w-100 btn-sm"
-                    (click)="quickLogin('user')"
-                    [disabled]="isLoading">
+                    (click)="quickLogin('user')">
                     <i [class]="'bi ' + demoCredentials.user.icon + ' me-1'"></i>
                     {{ demoCredentials.user.label }}
                   </button>
@@ -66,6 +64,7 @@
               <span>OR LOGIN WITH EMAIL</span>
             </div>
 
+            @if (loginForm) {
             <!-- Login Form -->
             <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
               <!-- Email Field -->
@@ -79,8 +78,7 @@
                   class="form-control form-control-lg"
                   [class.is-invalid]="hasError('email')"
                   formControlName="email"
-                  placeholder="Enter your email"
-                  [disabled]="isLoading">
+                  placeholder="Enter your email">
                 
                 @if (hasError('email')) {
                   <div class="invalid-feedback">
@@ -101,14 +99,12 @@
                     class="form-control form-control-lg"
                     [class.is-invalid]="hasError('password')"
                     formControlName="password"
-                    placeholder="Enter your password"
-                    [disabled]="isLoading">
+                    placeholder="Enter your password">
                   
                   <button 
                     class="btn btn-outline-secondary" 
                     type="button"
-                    (click)="togglePasswordVisibility()"
-                    [disabled]="isLoading">
+                    (click)="togglePasswordVisibility()">
                     <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                   </button>
                   
@@ -144,8 +140,7 @@
               <!-- Submit Button -->
               <button 
                 type="submit" 
-                class="btn btn-primary btn-lg w-100 mb-3"
-                [disabled]="isLoading">
+                class="btn btn-primary btn-lg w-100 mb-3">
                 
                 @if (isLoading) {
                   <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -167,6 +162,7 @@
                 </a>
               </div>
             </form>
+          }
           </div>
 
           <!-- Card Footer -->
