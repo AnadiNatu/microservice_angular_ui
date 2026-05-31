@@ -1,0 +1,75 @@
+<!-- Sidebar Navigation -->
+<div class="sidebar bg-white border-end vh-100 d-flex flex-column">
+  <!-- Sidebar Header -->
+  <div class="sidebar-header p-3 border-bottom">
+    <h6 class="mb-0 text-muted text-uppercase fw-semibold" style="font-size: 0.75rem; letter-spacing: 1px;">
+      Navigation
+    </h6>
+  </div>
+
+  <!-- Menu Items -->
+  <nav class="sidebar-nav flex-grow-1 overflow-auto">
+    <ul class="nav flex-column p-2">
+      <!-- Loop through menu items using @for -->
+      @for (item of menuItems; track item.route) {
+        <li class="nav-item mb-1">
+          <!-- Menu Item without Children -->
+          @if (!item.children) {
+            <a 
+              [routerLink]="item.route" 
+              [class.active]="isActive(item.route)"
+              class="nav-link d-flex align-items-center gap-3 rounded py-2 px-3"
+              routerLinkActive="active">
+              <i [class]="'bi ' + item.icon + ' fs-5'"></i>
+              <span>{{ item.label }}</span>
+            </a>
+          }
+
+          <!-- Menu Item with Children (Submenu) -->
+          @if (item.children) {
+            <div class="submenu-parent">
+              <div 
+                class="nav-link d-flex align-items-center gap-3 rounded py-2 px-3 cursor-pointer"
+                [class.active]="isActive(item.route)"
+                data-bs-toggle="collapse" 
+                [attr.data-bs-target]="'#submenu-' + item.label.toLowerCase().replace(' ', '-')"
+                aria-expanded="false">
+                <i [class]="'bi ' + item.icon + ' fs-5'"></i>
+                <span class="flex-grow-1">{{ item.label }}</span>
+                <i class="bi bi-chevron-down submenu-arrow"></i>
+              </div>
+
+              <!-- Submenu Items -->
+              <div 
+                class="collapse submenu" 
+                [id]="'submenu-' + item.label.toLowerCase().replace(' ', '-')">
+                <ul class="nav flex-column ps-4">
+                  @for (child of item.children; track child.route) {
+                    <li class="nav-item">
+                      <a 
+                        [routerLink]="child.route" 
+                        [class.active]="isActive(child.route)"
+                        class="nav-link d-flex align-items-center gap-2 rounded py-2 px-3"
+                        routerLinkActive="active">
+                        <i [class]="'bi ' + child.icon"></i>
+                        <span>{{ child.label }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <!-- Sidebar Footer -->
+  <div class="sidebar-footer p-3 border-top">
+    <div class="d-flex align-items-center gap-2 text-muted small">
+      <i class="bi bi-info-circle"></i>
+      <span>v1.0.0 - OrderFlow</span>
+    </div>
+  </div>
+</div>
