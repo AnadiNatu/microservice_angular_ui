@@ -5,20 +5,19 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { LoginCredentials, UserRole } from '../../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
 
-
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css'],
-  imports: [RouterModule, CommonModule , ReactiveFormsModule , FormsModule],
-  standalone: true
+  standalone: true,
+  imports: [RouterModule, CommonModule, ReactiveFormsModule, FormsModule]
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
-  isLoading: boolean = false;
-  errorMessage: string = '';
-  returnUrl: string = '';
-  showPassword: boolean = false;
+  isLoading = false;
+  errorMessage = '';
+  returnUrl = '';
+  showPassword = false;
 
   demoCredentials = {
     admin: {
@@ -38,41 +37,35 @@ export class LoginComponent implements OnInit {
   };
 
   constructor(
-  private fb: FormBuilder,
-  private authService: AuthService,
-  private router: Router,
-  private route: ActivatedRoute
-) {
-  this.loginForm = this.fb.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
-    rememberMe: [false]
-  });
-}
-
- ngOnInit(): void {
-
-  this.returnUrl =
-    this.route.snapshot.queryParams['returnUrl'] || '/';
-
-  if (this.authService.isLoggedIn()) {
-    this.redirectToDashboard();
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      rememberMe: [false]
+    });
   }
-}
 
-  // private initializeForm(): void {
-  //   this.loginForm = this.fb.group({
-  //     email: ['', [Validators.required, Validators.email]],
-  //     password: ['', [Validators.required, Validators.minLength(6)]],
-  //     rememberMe: [false]
-  //   });
-  // }
+  ngOnInit(): void {
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '';
+
+    // Only redirect if we have a fully valid, role-bearing session.
+    // If the stored user was stale, AuthService already cleared it,
+    // so isLoggedIn() will be false and we stay on the login page.
+    const role = this.authService.getUserRole();
+    if (this.authService.isLoggedIn() && role) {
+      this.redirectToDashboard(role);
+    }
+  }
 
   onSubmit(): void {
     if (this.loginForm.invalid) {
-      Object.keys(this.loginForm.controls).forEach(key => {
-        this.loginForm.get(key)?.markAsTouched();
-      });
+      Object.keys(this.loginForm.controls).forEach(key =>
+        this.loginForm.get(key)?.markAsTouched()
+      );
       return;
     }
 
@@ -85,78 +78,59 @@ export class LoginComponent implements OnInit {
   }
 
   private performLogin(credentials: LoginCredentials): void {
-    this.setLoadingState(true);
+    this.isLoading = true;
     this.errorMessage = '';
+    this.loginForm.disable();
 
     this.authService.login(credentials).subscribe({
       next: (user) => {
-        this.setLoadingState(false);
-        this.showSuccessMessage(user['username'] ?? user.email ?? 'User');
-        setTimeout(() => {
-          this.redirectToDashboard();
-        }, 1000);
+        this.isLoading = false;
+        this.loginForm.enable();
+        this.showSuccessMessage(user.fname);
+        setTimeout(() => this.redirectToDashboard(user.role), 1000);
       },
       error: (error) => {
-        this.setLoadingState(false);
+        this.isLoading = false;
+        this.loginForm.enable();
         this.errorMessage = error.message || 'Invalid email or password. Please try again.';
         this.shakeForm();
       }
     });
   }
 
-  private setLoadingState(loading: boolean): void {
-
-  this.isLoading = loading;
-
-  if (loading) {
-    this.loginForm.disable();
-  } else {
-    this.loginForm.enable();
-  }
-
-}
-
   quickLogin(type: 'admin' | 'user'): void {
-    const credentials = this.demoCredentials[type];
-    this.loginForm.patchValue({
-      email: credentials.email,
-      password: credentials.password
-    });
-    setTimeout(() => {
-      this.onSubmit();
-    }, 300);
+    const creds = this.demoCredentials[type];
+    this.loginForm.patchValue({ email: creds.email, password: creds.password });
+    setTimeout(() => this.onSubmit(), 300);
   }
 
-  private redirectToDashboard(): void {
-    const userRole = this.authService.getUserRole();
-
-    if (this.returnUrl && this.returnUrl !== '/' && !this.returnUrl.includes('login')) {
+  private redirectToDashboard(role: string): void {
+    if (this.returnUrl && !this.returnUrl.includes('/auth/login')) {
       this.router.navigateByUrl(this.returnUrl);
       return;
     }
-
-    if (userRole === UserRole.ADMIN) {
+    if (role === UserRole.ADMIN) {
       this.router.navigate(['/admin/dashboard']);
-    } else if (userRole === UserRole.USER) {
+    } else if (role === UserRole.USER) {
       this.router.navigate(['/user/products']);
     } else {
-      this.router.navigate(['/']);
+      this.router.navigate(['/auth/home']);
     }
   }
 
   private showSuccessMessage(userName: string): void {
-    const successDiv = document.createElement('div');
-    successDiv.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
-    successDiv.style.zIndex = '9999';
-    successDiv.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>Welcome back, ${userName}!`;
-    document.body.appendChild(successDiv);
-    setTimeout(() => successDiv.remove(), 2000);
+    const div = document.createElement('div');
+    div.className = 'alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3';
+    div.style.zIndex = '9999';
+    div.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i>Welcome back, ${userName}!`;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
   }
 
   private shakeForm(): void {
-    const formElement = document.querySelector('.login-card');
-    formElement?.classList.add('shake');
-    setTimeout(() => formElement?.classList.remove('shake'), 500);
+    const el = document.querySelector('.login-card');
+    el?.classList.add('shake');
+    setTimeout(() => el?.classList.remove('shake'), 500);
   }
 
   togglePasswordVisibility(): void {
@@ -170,27 +144,13 @@ export class LoginComponent implements OnInit {
 
   getErrorMessage(fieldName: string): string {
     const field = this.loginForm.get(fieldName);
-    if (field?.hasError('required')) {
-      return `${fieldName === 'email' ? 'Email' : 'Password'} is required`;
-    }
-    if (field?.hasError('email')) {
-      return 'Please enter a valid email address';
-    }
-    if (field?.hasError('minlength')) {
-      return 'Password must be at least 6 characters';
-    }
+    if (field?.hasError('required')) return `${fieldName === 'email' ? 'Email' : 'Password'} is required`;
+    if (field?.hasError('email')) return 'Please enter a valid email address';
+    if (field?.hasError('minlength')) return 'Password must be at least 6 characters';
     return '';
   }
 
-  goToSignup(): void {
-    this.router.navigate(['/auth/signup']);
-  }
-
-  goToForgotPassword(): void {
-    this.router.navigate(['/auth/forgot-password']);
-  }
-
-  goToHome(): void {
-    this.router.navigate(['/']);
-  }
-}  
+  goToSignup(): void { this.router.navigate(['/auth/signup']); }
+  goToForgotPassword(): void { this.router.navigate(['/auth/forgot-password']); }
+  goToHome(): void { this.router.navigate(['/auth/home']); }
+}
