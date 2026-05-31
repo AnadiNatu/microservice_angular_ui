@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Routes } from '@angular/router';
+import { RouterModule} from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { HomePageComponent } from './components/home-page/home-page.component';
@@ -8,6 +8,7 @@ import { LoginComponent } from './components/login/login.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { SignupComponent } from './components/signup/signup.component';
 
+import { Routes } from '@angular/router';
 
 export const AUTH_ROUTES: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -32,4 +33,3 @@ export const AUTH_ROUTES: Routes = [
     loadComponent: () => import('./components/home-page/home-page.component').then(m => m.HomePageComponent)
   }
 ];
-

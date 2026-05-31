@@ -5,16 +5,15 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { SignUpDTO } from '../../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
 import { HighlightDirective } from '../../../../shared/directives/highlight.directive';
-
 @Component({
   selector: 'app-signup',
   templateUrl: './signup.component.html',
   styleUrls: ['./signup.component.css'],
-  imports: [RouterLink, CommonModule , FormsModule, ReactiveFormsModule , HighlightDirective],
-  standalone: true
+  standalone: true,
+  imports: [RouterLink, CommonModule, FormsModule, ReactiveFormsModule, HighlightDirective]
 })
 export class SignupComponent implements OnInit {
- signupForm!: FormGroup;
+  signupForm!: FormGroup;
   isLoading: boolean = false;
   errorMessage: string = '';
   showPassword: boolean = false;
