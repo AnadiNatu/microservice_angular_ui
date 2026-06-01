@@ -52,9 +52,8 @@ export class LoginComponent implements OnInit {
   ngOnInit(): void {
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '';
 
-    // Only redirect if we have a fully valid, role-bearing session.
-    // If the stored user was stale, AuthService already cleared it,
-    // so isLoggedIn() will be false and we stay on the login page.
+    // If somehow a logged-in user lands here (guard missed it), redirect them.
+    // The AuthGuard on the auth route handles this in most cases.
     const role = this.authService.getUserRole();
     if (this.authService.isLoggedIn() && role) {
       this.redirectToDashboard(role);
@@ -105,16 +104,15 @@ export class LoginComponent implements OnInit {
   }
 
   private redirectToDashboard(role: string): void {
-    if (this.returnUrl && !this.returnUrl.includes('/auth/login')) {
-      this.router.navigateByUrl(this.returnUrl);
+    // Honor the returnUrl if it's a valid protected route
+    if (this.returnUrl && !this.returnUrl.includes('/auth/')) {
+      this.router.navigateByUrl(this.returnUrl, { replaceUrl: true });
       return;
     }
     if (role === UserRole.ADMIN) {
-      this.router.navigate(['/admin/dashboard']);
-    } else if (role === UserRole.USER) {
-      this.router.navigate(['/user/products']);
+      this.router.navigate(['/admin/dashboard'], { replaceUrl: true });
     } else {
-      this.router.navigate(['/auth/home']);
+      this.router.navigate(['/auth/home'], { replaceUrl: true });
     }
   }
 

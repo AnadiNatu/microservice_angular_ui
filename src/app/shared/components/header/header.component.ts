@@ -25,6 +25,8 @@ export class HeaderComponent {
   }
 
   logout(): void {
+    // AuthService.logout() clears storage, resets signals,
+    // and navigates to /auth/login with replaceUrl:true
     this.authService.logout();
   }
 
