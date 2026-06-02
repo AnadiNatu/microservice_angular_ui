@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
   imports: [RouterModule, CommonModule, ReactiveFormsModule, FormsModule]
 })
 export class LoginComponent implements OnInit {
-  loginForm: FormGroup;
+   loginForm: FormGroup;
   isLoading = false;
   errorMessage = '';
   returnUrl = '';
@@ -51,13 +51,8 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '';
-
-    // If somehow a logged-in user lands here (guard missed it), redirect them.
-    // The AuthGuard on the auth route handles this in most cases.
-    const role = this.authService.getUserRole();
-    if (this.authService.isLoggedIn() && role) {
-      this.redirectToDashboard(role);
-    }
+    // NOTE: The AuthGuard on /auth handles the redirect for already-logged-in
+    // users before this component even loads. No redirect needed here.
   }
 
   onSubmit(): void {
@@ -86,7 +81,7 @@ export class LoginComponent implements OnInit {
         this.isLoading = false;
         this.loginForm.enable();
         this.showSuccessMessage(user.fname);
-        setTimeout(() => this.redirectToDashboard(user.role), 1000);
+        setTimeout(() => this.redirectAfterLogin(user.role), 1000);
       },
       error: (error) => {
         this.isLoading = false;
@@ -97,14 +92,7 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  quickLogin(type: 'admin' | 'user'): void {
-    const creds = this.demoCredentials[type];
-    this.loginForm.patchValue({ email: creds.email, password: creds.password });
-    setTimeout(() => this.onSubmit(), 300);
-  }
-
-  private redirectToDashboard(role: string): void {
-    // Honor the returnUrl if it's a valid protected route
+  private redirectAfterLogin(role: string): void {
     if (this.returnUrl && !this.returnUrl.includes('/auth/')) {
       this.router.navigateByUrl(this.returnUrl, { replaceUrl: true });
       return;
@@ -114,6 +102,12 @@ export class LoginComponent implements OnInit {
     } else {
       this.router.navigate(['/auth/home'], { replaceUrl: true });
     }
+  }
+
+  quickLogin(type: 'admin' | 'user'): void {
+    const creds = this.demoCredentials[type];
+    this.loginForm.patchValue({ email: creds.email, password: creds.password });
+    setTimeout(() => this.onSubmit(), 300);
   }
 
   private showSuccessMessage(userName: string): void {
@@ -150,5 +144,4 @@ export class LoginComponent implements OnInit {
 
   goToSignup(): void { this.router.navigate(['/auth/signup']); }
   goToForgotPassword(): void { this.router.navigate(['/auth/forgot-password']); }
-  goToHome(): void { this.router.navigate(['/auth/home']); }
-}
+  goToHome(): void { this.router.navigate(['/auth/home']); }}

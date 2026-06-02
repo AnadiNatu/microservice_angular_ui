@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.gaurd';
+
 export const routes: Routes = [
   {
     path: '',
@@ -7,7 +8,7 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
   {
-    // Auth routes — logged-in users are redirected away by the guard
+    // canActivate here means: if already logged in, skip auth pages entirely
     path: 'auth',
     loadChildren: () =>
       import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),

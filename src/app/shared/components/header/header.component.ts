@@ -1,4 +1,4 @@
-import { Component, Signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, Signal } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { Router, RouterLink, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -6,7 +6,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HighlightDirective } from '../../directives/highlight.directive';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { User } from '../../../core/models/user.model';
-
+import { Subscription } from 'rxjs/internal/Subscription';
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
@@ -14,30 +14,39 @@ import { User } from '../../../core/models/user.model';
   standalone: true,
   imports: [RouterLink, RouterModule, CommonModule]
 })
-export class HeaderComponent {
-  user: Signal<User | null>;
+export class HeaderComponent implements OnInit, OnDestroy {
+  currentUser: User | null = null;
+  private userSub!: Subscription;
 
   constructor(
     private authService: AuthService,
     private router: Router
-  ) {
-    this.user = this.authService.userSignal;
+  ) {}
+
+  ngOnInit(): void {
+    // Subscribe to the BehaviorSubject so the header reactively
+    // updates when the user logs in or out
+    this.userSub = this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.userSub?.unsubscribe();
   }
 
   logout(): void {
-    // AuthService.logout() clears storage, resets signals,
-    // and navigates to /auth/login with replaceUrl:true
     this.authService.logout();
   }
 
   getFullName(): string {
-    const u = this.user();
-    return u ? `${u.fname} ${u.lname}` : 'Guest';
+    return this.currentUser
+      ? `${this.currentUser.fname} ${this.currentUser.lname}`
+      : 'Guest';
   }
 
   getInitials(): string {
-    const u = this.user();
-    if (!u) return 'G';
-    return `${u.fname.charAt(0)}${u.lname.charAt(0)}`.toUpperCase();
+    if (!this.currentUser) return 'G';
+    return `${this.currentUser.fname.charAt(0)}${this.currentUser.lname.charAt(0)}`.toUpperCase();
   }
 }

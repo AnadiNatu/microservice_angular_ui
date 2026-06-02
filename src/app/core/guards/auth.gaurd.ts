@@ -1,15 +1,14 @@
 import { Injectable } from '@angular/core';
-import { 
-  CanActivate, 
-  ActivatedRouteSnapshot, 
-  RouterStateSnapshot, 
-  Router, 
-  UrlTree 
+import {
+  CanActivate,
+  ActivatedRouteSnapshot,
+  RouterStateSnapshot,
+  Router,
+  UrlTree
 } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { UserRole } from '../models/user.model';
-
 
 @Injectable({
   providedIn: 'root'
@@ -28,32 +27,33 @@ export class AuthGuard implements CanActivate {
 
     const isLoggedIn = this.authService.isLoggedIn();
     const userRole = this.authService.getUserRole();
-    const expectedRole = route.data['role'];
 
-    // --- Protect auth routes from already-logged-in users ---
-    // If the target is under /auth and the user is already authenticated,
-    // send them straight to their dashboard so they never see login again.
+    // Guard for auth routes (/auth/login, /auth/signup etc.)
+    // If user is already logged in with a valid role, redirect to their dashboard
     if (route.data['isAuthRoute']) {
-      if (isLoggedIn && userRole) {
-        return userRole === UserRole.ADMIN
-          ? this.router.createUrlTree(['/admin/dashboard'])
-          : this.router.createUrlTree(['/auth/home']);
+      if (isLoggedIn && userRole === UserRole.ADMIN) {
+        return this.router.createUrlTree(['/admin/dashboard']);
+      }
+      if (isLoggedIn && userRole === UserRole.USER) {
+        return this.router.createUrlTree(['/auth/home']);
       }
       return true;
     }
 
-    // --- Protect private routes ---
+    // Guard for protected routes (/admin etc.)
     if (!isLoggedIn) {
       return this.router.createUrlTree(['/auth/login'], {
         queryParams: { returnUrl: state.url }
       });
     }
 
-    // Role check
+    const expectedRole = route.data['role'];
     if (expectedRole && userRole !== expectedRole) {
-      return userRole === UserRole.ADMIN
-        ? this.router.createUrlTree(['/admin/dashboard'])
-        : this.router.createUrlTree(['/auth/home']);
+      // Role mismatch — send to their actual dashboard
+      if (userRole === UserRole.ADMIN) {
+        return this.router.createUrlTree(['/admin/dashboard']);
+      }
+      return this.router.createUrlTree(['/auth/login']);
     }
 
     return true;

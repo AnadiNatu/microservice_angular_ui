@@ -105,27 +105,26 @@ export class AuthService {
   }
 
   logout(): void {
-    console.log('Logging out user:', this.currentUserSubject.value?.email);
+    console.log('Logging out:', this.currentUserSubject.value?.email);
 
-    // 1. Clear all storage — token + user object
+    // Step 1 — wipe localStorage completely
     this.storageService.clear();
 
-    // 2. Reset all reactive state so every subscriber sees null immediately
+    // Step 2 — reset all reactive state atomically
     this.currentUserSubject.next(null);
     this.userSignal.set(null);
 
-    // 3. Navigate to login — replaceUrl: true prevents the back button
-    //    from returning to the protected page after logout
+    // Step 3 — navigate to login, replacing history so back button
+    // cannot return to a protected page
     this.router.navigate(['/auth/login'], { replaceUrl: true });
 
-    console.log('Logout complete. Storage cleared, session ended.');
+    console.log('Logout complete.');
   }
 
   updateUser(user: User): void {
     this.storageService.saveUser(user);
     this.currentUserSubject.next(user);
     this.userSignal.set(user);
-    console.log('User profile updated');
   }
 
   isLoggedIn(): boolean {

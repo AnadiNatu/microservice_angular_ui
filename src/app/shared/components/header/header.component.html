@@ -3,7 +3,7 @@
   <div class="container-fluid px-4">
     <!-- Brand Logo -->
     <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/auth/home">
-      <div class="brand-icon bg-gradient-primary text-white rounded p-2">
+      <div class="brand-icon text-white rounded p-2">
         <i class="bi bi-box-seam fs-5"></i>
       </div>
       <span class="fw-bold text-primary">OrderFlow Pro</span>
@@ -11,12 +11,13 @@
 
     <!-- User Section -->
     <div class="ms-auto d-flex align-items-center gap-3">
-      @if (user(); as u) {
+
+      @if (currentUser) {
         <!-- User Info (hidden on mobile) -->
         <div class="d-none d-md-block text-end">
           <div class="fw-semibold small text-dark">{{ getFullName() }}</div>
           <div class="text-muted" style="font-size: 0.75rem;">
-            {{ u.role | titlecase }} Account
+            {{ currentUser.role | titlecase }} Account
           </div>
         </div>
 
@@ -28,34 +29,36 @@
             id="userDropdown"
             data-bs-toggle="dropdown"
             aria-expanded="false">
-            @if (u.avatar) {
+            @if (currentUser.avatar) {
               <img
-                [src]="u.avatar"
+                [src]="currentUser.avatar"
                 [alt]="getFullName()"
                 class="rounded-circle border border-2 border-primary"
                 width="42"
                 height="42"
                 style="object-fit: cover; cursor: pointer;">
             } @else {
-              <div class="avatar-fallback rounded-circle border border-2 border-primary d-flex align-items-center justify-content-center bg-primary text-white fw-bold"
+              <div
+                class="avatar-fallback rounded-circle border border-2 border-primary d-flex align-items-center justify-content-center bg-primary text-white fw-bold"
                 style="width: 42px; height: 42px; cursor: pointer;">
                 {{ getInitials() }}
               </div>
             }
           </button>
 
-          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2"
+          <ul
+            class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2"
             aria-labelledby="userDropdown"
             style="min-width: 220px;">
+
             <!-- Mobile-only user info -->
             <li class="d-md-none px-3 py-2 border-bottom">
               <div class="fw-semibold">{{ getFullName() }}</div>
-              <div class="small text-muted">{{ u.email }}</div>
+              <div class="small text-muted">{{ currentUser.email }}</div>
             </li>
 
             <li>
-              <a class="dropdown-item py-2"
-                [routerLink]="['/admin/profile']">
+              <a class="dropdown-item py-2" routerLink="/admin/profile">
                 <i class="bi bi-person me-2 text-primary"></i>
                 My Profile
               </a>
@@ -63,18 +66,25 @@
 
             <li><hr class="dropdown-divider"></li>
 
-            <!-- Logout -->
+            <!-- Logout button — always visible when user is set -->
             <li>
-              <a class="dropdown-item py-2 text-danger"
-                (click)="logout()"
-                style="cursor: pointer;">
+              <button
+                class="dropdown-item py-2 text-danger w-100 text-start border-0 bg-transparent"
+                type="button"
+                (click)="logout()">
                 <i class="bi bi-box-arrow-right me-2"></i>
                 Logout
-              </a>
+              </button>
             </li>
           </ul>
         </div>
+      } @else {
+        <!-- Show login button when no user -->
+        <a class="btn btn-primary btn-sm" routerLink="/auth/login">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Login
+        </a>
       }
+
     </div>
   </div>
 </nav>
