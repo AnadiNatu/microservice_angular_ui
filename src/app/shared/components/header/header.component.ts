@@ -24,8 +24,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Subscribe to the BehaviorSubject so the header reactively
-    // updates when the user logs in or out
     this.userSub = this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
     });

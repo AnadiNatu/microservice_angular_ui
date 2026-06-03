@@ -22,6 +22,12 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     data: { role: 'ADMIN' }
   },
+   {
+    path: 'user',
+    loadChildren: () => import('./features/user/user.routes').then(m => m.USER_ROUTES),
+    canActivate: [AuthGuard],
+    data: { role: 'USER' }
+  },
   {
     path: '**',
     redirectTo: 'auth/home'

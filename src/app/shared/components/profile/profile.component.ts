@@ -19,7 +19,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 export class ProfileComponent implements OnInit {
   profileForm!: FormGroup;
   currentUser: User | null = null;
-  isEditMode: boolean = false;
+  isEditMode = false;
   uploadedImage: string | null = null;
 
   constructor(
@@ -34,28 +34,15 @@ export class ProfileComponent implements OnInit {
 
   private initializeForm(): void {
     this.profileForm = this.fb.group({
-      fname: [
-        { value: this.currentUser?.fname || '', disabled: true },
-        [Validators.required, Validators.minLength(2)]
-      ],
-      lname: [
-        { value: this.currentUser?.lname || '', disabled: true },
-        [Validators.required, Validators.minLength(2)]
-      ],
-      email: [
-        { value: this.currentUser?.email || '', disabled: true },
-        [Validators.required, Validators.email]
-      ],
-      phoneNumber: [
-        { value: this.currentUser?.phoneNumber || '', disabled: true },
-        [Validators.pattern(/^[+]?[\d\s\-()]+$/)]
-      ]
+      fname: [{ value: this.currentUser?.fname || '', disabled: true }, [Validators.required, Validators.minLength(2)]],
+      lname: [{ value: this.currentUser?.lname || '', disabled: true }, [Validators.required, Validators.minLength(2)]],
+      email: [{ value: this.currentUser?.email || '', disabled: true }, [Validators.required, Validators.email]],
+      phoneNumber: [{ value: this.currentUser?.phoneNumber || '', disabled: true }, [Validators.pattern(/^[+]?[\d\s\-()]+$/)]]
     });
   }
 
   toggleEditMode(): void {
     this.isEditMode = !this.isEditMode;
-
     if (this.isEditMode) {
       this.profileForm.get('fname')?.enable();
       this.profileForm.get('lname')?.enable();
@@ -74,52 +61,44 @@ export class ProfileComponent implements OnInit {
 
   saveProfile(): void {
     if (this.profileForm.invalid) {
-      Object.keys(this.profileForm.controls).forEach(key => {
-        this.profileForm.get(key)?.markAsTouched();
-      });
+      Object.keys(this.profileForm.controls).forEach(k => this.profileForm.get(k)?.markAsTouched());
       return;
     }
-
-    const formValue = this.profileForm.getRawValue();
-
+    const v = this.profileForm.getRawValue();
     if (this.currentUser) {
-      const updatedUser: User = {
-        ...this.currentUser,
-        fname: formValue.fname,
-        lname: formValue.lname,
-        phoneNumber: formValue.phoneNumber,
-        avatar: this.uploadedImage || this.currentUser.avatar
-      };
-      this.authService.updateUser(updatedUser);
-      this.currentUser = updatedUser;
+      const updated: User = { ...this.currentUser, fname: v.fname, lname: v.lname, phoneNumber: v.phoneNumber, avatar: this.uploadedImage || this.currentUser.avatar };
+      this.authService.updateUser(updated);
+      this.currentUser = updated;
       alert('Profile updated successfully!');
     }
     this.toggleEditMode();
+  }
+
+  logout(): void {
+    this.authService.logout();
   }
 
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.uploadedImage = e.target.result;
-      };
+      reader.onload = (e: any) => { this.uploadedImage = e.target.result; };
       reader.readAsDataURL(file);
     }
   }
 
-  getErrorMessage(fieldName: string): string {
-    const control = this.profileForm.get(fieldName);
-    if (control?.hasError('required')) return `${fieldName} is required`;
-    if (control?.hasError('minlength')) return `${fieldName} must be at least 2 characters`;
-    if (control?.hasError('email')) return 'Invalid email format';
-    if (control?.hasError('pattern')) return 'Invalid phone number format';
-    return '';
+  hasError(f: string): boolean {
+    const c = this.profileForm.get(f);
+    return !!(c && c.invalid && c.touched);
   }
 
-  hasError(fieldName: string): boolean {
-    const control = this.profileForm.get(fieldName);
-    return !!(control && control.invalid && control.touched);
+  getErrorMessage(f: string): string {
+    const c = this.profileForm.get(f);
+    if (c?.hasError('required')) return `${f} is required`;
+    if (c?.hasError('minlength')) return `${f} must be at least 2 characters`;
+    if (c?.hasError('email')) return 'Invalid email format';
+    if (c?.hasError('pattern')) return 'Invalid phone number format';
+    return '';
   }
 
   getAvatar(): string {
