@@ -15,7 +15,7 @@ import { CustomCurrencyPipe } from '../../../shared/pipes/custom-currency.pipe';
   styleUrl: './user-product.component.css'
 })
 export class UserProductComponent {
- products: Product[] = [];
+  products: Product[] = [];
   filtered: Product[] = [];
   searchTerm = '';
   selectedCategory = 'all';
@@ -30,8 +30,12 @@ export class UserProductComponent {
 
   ngOnInit(): void {
     this.userName = this.authService.getCurrentUser()?.fname || 'User';
-    this.adminService.getAllProducts().subscribe({
-      next: (products) => { this.products = products; this.filtered = products; this.isLoading = false; },
+    this.adminService.getActiveProducts().subscribe({
+      next: (products) => {
+        this.products = products;
+        this.filtered = products;
+        this.isLoading = false;
+      },
       error: () => { this.isLoading = false; }
     });
   }
@@ -39,7 +43,9 @@ export class UserProductComponent {
   filterProducts(): void {
     const term = this.searchTerm.toLowerCase().trim();
     this.filtered = this.products.filter(p => {
-      const matchSearch = !term || p.productName.toLowerCase().includes(term) || p.productDesc.toLowerCase().includes(term);
+      const matchSearch = !term ||
+        p.productName.toLowerCase().includes(term) ||
+        p.productDesc.toLowerCase().includes(term);
       const matchCat = this.selectedCategory === 'all' || p.category === this.selectedCategory;
       return matchSearch && matchCat;
     });

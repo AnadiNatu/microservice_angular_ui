@@ -12,7 +12,7 @@ import { CommonModule, DatePipe } from '@angular/common';
   styleUrl: './user-orders.component.css'
 })
 export class UserOrdersComponent {
-orders: Order[] = [];
+ orders: Order[] = [];
   isLoading = true;
 
   constructor(

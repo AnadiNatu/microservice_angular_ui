@@ -1,10 +1,14 @@
-import { Component, NgModule, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Component, OnInit } from '@angular/core';
+import {
+  FormBuilder, FormGroup, Validators, AbstractControl,
+  ValidationErrors, FormsModule, ReactiveFormsModule
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { SignUpDTO } from '../../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
 import { HighlightDirective } from '../../../../shared/directives/highlight.directive';
+
 @Component({
   selector: 'app-signup',
   templateUrl: './signup.component.html',
@@ -14,11 +18,11 @@ import { HighlightDirective } from '../../../../shared/directives/highlight.dire
 })
 export class SignupComponent implements OnInit {
   signupForm!: FormGroup;
-  isLoading: boolean = false;
-  errorMessage: string = '';
-  showPassword: boolean = false;
-  showConfirmPassword: boolean = false;
-  passwordStrength: number = 0;
+  isLoading = false;
+  errorMessage = '';
+  showPassword = false;
+  showConfirmPassword = false;
+  passwordStrength = 0;
 
   constructor(
     private fb: FormBuilder,
@@ -36,75 +40,48 @@ export class SignupComponent implements OnInit {
       lname: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       phoneNumber: ['', [Validators.required, Validators.pattern(/^[+]?[\d\s\-()]+$/)]],
-      password: ['', [Validators.required, Validators.minLength(6), this.passwordStrengthValidator]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required]]
-    }, {
-      validators: this.passwordMatchValidator
-    });
+    }, { validators: this.passwordMatchValidator });
 
-    this.signupForm.get('password')?.valueChanges.subscribe(password => {
-      this.calculatePasswordStrength(password);
-    });
+    this.signupForm.get('password')?.valueChanges.subscribe(p => this.calculatePasswordStrength(p));
   }
 
   private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.get('password');
-    const confirmPassword = control.get('confirmPassword');
-    if (!password || !confirmPassword) return null;
-    return password.value === confirmPassword.value ? null : { passwordMismatch: true };
-  }
-
-  private passwordStrengthValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.value;
-    if (!password) return null;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const strength = [hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar].filter(Boolean).length;
-    return strength >= 3 ? null : { weakPassword: true };
+    const p = control.get('password');
+    const c = control.get('confirmPassword');
+    if (!p || !c) return null;
+    return p.value === c.value ? null : { passwordMismatch: true };
   }
 
   private calculatePasswordStrength(password: string): void {
     if (!password) { this.passwordStrength = 0; return; }
-    let strength = 0;
-    if (password.length >= 6) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
-    this.passwordStrength = strength;
+    let s = 0;
+    if (password.length >= 8) s++;
+    if (/[A-Z]/.test(password)) s++;
+    if (/[a-z]/.test(password)) s++;
+    if (/[0-9]/.test(password)) s++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) s++;
+    this.passwordStrength = s;
   }
 
   getPasswordStrengthLabel(): string {
-    switch (this.passwordStrength) {
-      case 0: case 1: return 'Weak';
-      case 2: return 'Fair';
-      case 3: return 'Good';
-      case 4: case 5: return 'Strong';
-      default: return '';
-    }
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+    return labels[this.passwordStrength] || '';
   }
 
   getPasswordStrengthColor(): string {
-    switch (this.passwordStrength) {
-      case 0: case 1: return 'danger';
-      case 2: return 'warning';
-      case 3: return 'info';
-      case 4: case 5: return 'success';
-      default: return 'secondary';
-    }
+    const colors = ['secondary', 'danger', 'warning', 'info', 'success', 'success'];
+    return colors[this.passwordStrength] || 'secondary';
   }
 
   onSubmit(): void {
     if (this.signupForm.invalid) {
-      Object.keys(this.signupForm.controls).forEach(key => {
-        this.signupForm.get(key)?.markAsTouched();
-      });
+      Object.keys(this.signupForm.controls).forEach(k => this.signupForm.get(k)?.markAsTouched());
       return;
     }
 
-    const signupData: SignUpDTO = {
+    const data: SignUpDTO = {
       fname: this.signupForm.value.fname,
       lname: this.signupForm.value.lname,
       email: this.signupForm.value.email,
@@ -112,10 +89,6 @@ export class SignupComponent implements OnInit {
       password: this.signupForm.value.password
     };
 
-    this.performSignup(signupData);
-  }
-
-  private performSignup(data: SignUpDTO): void {
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -127,47 +100,42 @@ export class SignupComponent implements OnInit {
       },
       error: (error) => {
         this.isLoading = false;
-        this.errorMessage = error.message || 'Signup failed. Please try again.';
+        this.errorMessage = error.message || 'Registration failed. Please try again.';
       }
     });
   }
 
   togglePasswordVisibility(field: 'password' | 'confirmPassword'): void {
-    if (field === 'password') {
-      this.showPassword = !this.showPassword;
-    } else {
-      this.showConfirmPassword = !this.showConfirmPassword;
-    }
+    if (field === 'password') this.showPassword = !this.showPassword;
+    else this.showConfirmPassword = !this.showConfirmPassword;
   }
 
-  hasError(fieldName: string): boolean {
-    const field = this.signupForm.get(fieldName);
-    return !!(field && field.invalid && field.touched);
+  hasError(f: string): boolean {
+    const c = this.signupForm.get(f);
+    return !!(c && c.invalid && c.touched);
   }
 
-  getErrorMessage(fieldName: string): string {
-    const field = this.signupForm.get(fieldName);
-    if (field?.hasError('required')) return `${this.getFieldLabel(fieldName)} is required`;
-    if (field?.hasError('minlength')) return `${this.getFieldLabel(fieldName)} must be at least ${field.errors?.['minlength'].requiredLength} characters`;
-    if (field?.hasError('email')) return 'Please enter a valid email address';
-    if (field?.hasError('pattern')) return 'Please enter a valid phone number';
-    if (field?.hasError('weakPassword')) return 'Password must contain uppercase, lowercase, number, and special character';
+  getErrorMessage(f: string): string {
+    const c = this.signupForm.get(f);
+    if (c?.hasError('required')) return `${this.getFieldLabel(f)} is required`;
+    if (c?.hasError('minlength')) return `${this.getFieldLabel(f)} must be at least ${c.errors?.['minlength'].requiredLength} characters`;
+    if (c?.hasError('email')) return 'Please enter a valid email address';
+    if (c?.hasError('pattern')) return 'Please enter a valid phone number';
     return '';
   }
 
   getFormError(): string {
-    if (this.signupForm.hasError('passwordMismatch')) return 'Passwords do not match';
-    return '';
+    return this.signupForm.hasError('passwordMismatch') ? 'Passwords do not match' : '';
   }
 
-  private getFieldLabel(fieldName: string): string {
-    const labels: { [key: string]: string } = {
+  private getFieldLabel(f: string): string {
+    const labels: { [k: string]: string } = {
       fname: 'First name', lname: 'Last name', email: 'Email',
       phoneNumber: 'Phone number', password: 'Password', confirmPassword: 'Confirm password'
     };
-    return labels[fieldName] || fieldName;
+    return labels[f] || f;
   }
 
   goToLogin(): void { this.router.navigate(['/auth/login']); }
-  goToHome(): void { this.router.navigate(['/']); }
+  goToHome(): void { this.router.navigate(['/auth/home']); }
 }

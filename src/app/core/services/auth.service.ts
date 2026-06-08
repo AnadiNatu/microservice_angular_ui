@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError, BehaviorSubject } from 'rxjs';
-import { delay, tap, catchError } from 'rxjs/operators';
+import { delay, tap, catchError, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 import { User, LoginCredentials, SignUpDTO, UserRole, ForgotPasswordRequest, ResetPasswordRequest } from '../models/user.model';
@@ -11,7 +11,8 @@ import { StorageService } from './storage.service';
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly BASE_URL = 'http://localhost:8080/api/auth/';
+ private readonly AUTH_URL = 'http://localhost:8083/api/auth';
+  private readonly PASSWORD_URL = 'http://localhost:8083/api/password';
 
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
@@ -34,7 +35,6 @@ export class AuthService {
     if (savedUser) {
       this.currentUserSubject.next(savedUser);
       this.userSignal.set(savedUser);
-      console.log('Auth state restored:', savedUser.email, '| role:', savedUser.role);
     } else {
       this.currentUserSubject.next(null);
       this.userSignal.set(null);
@@ -42,83 +42,104 @@ export class AuthService {
   }
 
   login(credentials: LoginCredentials): Observable<User> {
-    return this.mockLogin(credentials).pipe(
-      delay(1000),
-      tap(user => this.setSession(user)),
+    // The backend LoginRequest uses 'username' field (which accepts email/phone/username)
+    const backendPayload = {
+      username: credentials.email,
+      password: credentials.password
+    };
+
+    return this.http.post<any>(`${this.AUTH_URL}/login`, backendPayload).pipe(
+      map(response => this.mapBackendResponseToUser(response, credentials.email)),
+      tap(user => this.setSession(user, '')),
       catchError(error => {
-        console.error('Login error:', error);
-        return throwError(() => error);
+        const message = error.error?.message || error.message || 'Invalid credentials';
+        return throwError(() => new Error(message));
       })
     );
   }
 
-  private mockLogin(credentials: LoginCredentials): Observable<User> {
-    if (credentials.email === 'admin@system.com' && credentials.password === 'admin123') {
-      return of({
-        id: 1,
-        fname: 'System',
-        lname: 'Administrator',
-        email: credentials.email,
-        role: UserRole.ADMIN,
-        phoneNumber: '+1 (555) 123-4567',
-        avatar: 'https://ui-avatars.com/api/?name=System+Admin&background=4f46e5&color=fff'
-      });
-    }
+  // Overload that also saves the raw token
+  loginWithToken(credentials: LoginCredentials): Observable<{ user: User; token: string }> {
+    const backendPayload = {
+      username: credentials.email,
+      password: credentials.password
+    };
 
-    if (credentials.email === 'user@system.com' && credentials.password === 'user123') {
-      return of({
-        id: 2,
-        fname: 'John',
-        lname: 'Doe',
-        email: credentials.email,
-        role: UserRole.USER,
-        phoneNumber: '+1 (555) 987-6543',
-        avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=10b981&color=fff'
-      });
-    }
-
-    return throwError(() => new Error('Invalid email or password'));
+    return this.http.post<any>(`${this.AUTH_URL}/login`, backendPayload).pipe(
+      map(response => ({
+        user: this.mapBackendResponseToUser(response, credentials.email),
+        token: response.token || response.jwt || ''
+      })),
+      tap(({ user, token }) => this.setSession(user, token)),
+      catchError(error => {
+        const message = error.error?.message || 'Invalid credentials';
+        return throwError(() => new Error(message));
+      })
+    );
   }
 
-  private setSession(user: User): void {
-    const mockToken = `mock-jwt-token-${user.id}-${Date.now()}`;
+  private mapBackendResponseToUser(response: any, email: string): User {
+    // Backend AuthResponse: { id, token, refreshToken, username, email, roles, expiresIn }
+    // roles is a Set<String> like ["ROLE_ADMIN"] or ["ROLE_USER"]
+    const roles: string[] = response.roles
+      ? Array.from(response.roles as string[])
+      : [];
+
+    let role = UserRole.USER;
+    if (roles.some(r => r.includes('ADMIN'))) {
+      role = UserRole.ADMIN;
+    }
+
+    const username: string = response.username || email;
+    // Build fname/lname from username since backend doesn't have separate first/last
+    const nameParts = username.split(' ');
+    const fname = nameParts[0] || username;
+    const lname = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    return {
+      id: response.id || 0,
+      fname,
+      lname,
+      email: response.email || email,
+      role,
+      username,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=4f46e5&color=fff`
+    };
+  }
+
+  private setSession(user: User, token: string): void {
     this.storageService.saveUser(user);
-    this.storageService.saveToken(mockToken);
+    if (token) {
+      this.storageService.saveToken(token);
+    }
     this.currentUserSubject.next(user);
     this.userSignal.set(user);
-    console.log('Session established for:', user.email);
   }
 
   signup(data: SignUpDTO): Observable<User> {
-    return of({
-      id: Math.floor(Math.random() * 10000),
-      fname: data.fname,
-      lname: data.lname,
+    // Backend RegisterRequest: { username, password, email, phoneNumber, roles }
+    const backendPayload = {
+      username: `${data.fname} ${data.lname}`.trim(),
+      password: data.password,
       email: data.email,
-      role: UserRole.USER,
       phoneNumber: data.phoneNumber,
-      avatar: `https://ui-avatars.com/api/?name=${data.fname}+${data.lname}&background=random`
-    }).pipe(
-      delay(1000),
-      tap(() => console.log('User registered successfully'))
+      roles: ['ROLE_USER']
+    };
+
+    return this.http.post<any>(`${this.AUTH_URL}/register`, backendPayload).pipe(
+      map(response => this.mapBackendResponseToUser(response, data.email)),
+      catchError(error => {
+        const message = error.error?.message || 'Registration failed';
+        return throwError(() => new Error(message));
+      })
     );
   }
 
   logout(): void {
-    console.log('Logging out:', this.currentUserSubject.value?.email);
-
-    // Step 1 — wipe localStorage completely
     this.storageService.clear();
-
-    // Step 2 — reset all reactive state atomically
     this.currentUserSubject.next(null);
     this.userSignal.set(null);
-
-    // Step 3 — navigate to login, replacing history so back button
-    // cannot return to a protected page
     this.router.navigate(['/auth/login'], { replaceUrl: true });
-
-    console.log('Logout complete.');
   }
 
   updateUser(user: User): void {
@@ -140,11 +161,29 @@ export class AuthService {
   }
 
   forgotPassword(request: ForgotPasswordRequest): Observable<string> {
-    return of('Password reset link sent to your email').pipe(delay(1000));
+    return this.http.post<any>(
+      `${this.PASSWORD_URL}/forgot?email=${encodeURIComponent(request.email)}`,
+      {}
+    ).pipe(
+      map(res => res.message || 'OTP sent to your email'),
+      catchError(error => {
+        const message = error.error?.message || 'Failed to send reset link';
+        return throwError(() => new Error(message));
+      })
+    );
   }
 
   resetPassword(request: ResetPasswordRequest): Observable<void> {
-    return of(void 0).pipe(delay(1000));
+    return this.http.post<any>(
+      `${this.PASSWORD_URL}/reset?identifier=${encodeURIComponent(request.email)}&otp=${encodeURIComponent(request.token)}&newPassword=${encodeURIComponent(request.newPassword)}`,
+      {}
+    ).pipe(
+      map(() => void 0),
+      catchError(error => {
+        const message = error.error?.message || 'Password reset failed';
+        return throwError(() => new Error(message));
+      })
+    );
   }
 
   isAdmin(): boolean {

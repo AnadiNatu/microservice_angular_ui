@@ -5,7 +5,7 @@ import { User } from "../models/user.model";
   providedIn: 'root'
 })
 export class StorageService {
-  private readonly USER_KEY = 'auth-user';
+   private readonly USER_KEY = 'auth-user';
   private readonly TOKEN_KEY = 'auth-token';
 
   constructor() {}
@@ -19,9 +19,6 @@ export class StorageService {
     if (!userJson) return null;
     try {
       const parsed = JSON.parse(userJson);
-      // Validate that the stored object matches our User shape.
-      // If it came from a different backend/session it may have
-      // 'username' or 'roles[]' instead of 'fname' and 'role'.
       if (
         typeof parsed.id === 'number' &&
         typeof parsed.fname === 'string' &&
@@ -31,12 +28,10 @@ export class StorageService {
       ) {
         return parsed as User;
       }
-      // Shape mismatch — wipe stale data so the app starts clean
-      console.warn('StorageService: stale/invalid user shape in localStorage, clearing.');
+      console.warn('StorageService: stale/invalid user shape, clearing.');
       this.clear();
       return null;
     } catch (error) {
-      console.error('StorageService: error parsing user data:', error);
       this.clear();
       return null;
     }

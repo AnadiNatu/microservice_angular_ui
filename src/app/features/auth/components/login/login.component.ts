@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute, RouterLink, RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LoginCredentials, UserRole } from '../../../../core/models/user.model';
 import { CommonModule } from '@angular/common';
@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
   imports: [RouterModule, CommonModule, ReactiveFormsModule, FormsModule]
 })
 export class LoginComponent implements OnInit {
-   loginForm: FormGroup;
+  loginForm: FormGroup;
   isLoading = false;
   errorMessage = '';
   returnUrl = '';
@@ -43,7 +43,7 @@ export class LoginComponent implements OnInit {
     private route: ActivatedRoute
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       rememberMe: [false]
     });
@@ -51,8 +51,6 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '';
-    // NOTE: The AuthGuard on /auth handles the redirect for already-logged-in
-    // users before this component even loads. No redirect needed here.
   }
 
   onSubmit(): void {
@@ -86,7 +84,7 @@ export class LoginComponent implements OnInit {
       error: (error) => {
         this.isLoading = false;
         this.loginForm.enable();
-        this.errorMessage = error.message || 'Invalid email or password. Please try again.';
+        this.errorMessage = error.message || 'Invalid credentials. Please try again.';
         this.shakeForm();
       }
     });
@@ -100,7 +98,8 @@ export class LoginComponent implements OnInit {
     if (role === UserRole.ADMIN) {
       this.router.navigate(['/admin/dashboard'], { replaceUrl: true });
     } else {
-      this.router.navigate(['/auth/home'], { replaceUrl: true });
+      // USER role always goes to user products page
+      this.router.navigate(['/user/products'], { replaceUrl: true });
     }
   }
 
@@ -136,12 +135,12 @@ export class LoginComponent implements OnInit {
 
   getErrorMessage(fieldName: string): string {
     const field = this.loginForm.get(fieldName);
-    if (field?.hasError('required')) return `${fieldName === 'email' ? 'Email' : 'Password'} is required`;
-    if (field?.hasError('email')) return 'Please enter a valid email address';
+    if (field?.hasError('required')) return `${fieldName === 'email' ? 'Email/Username' : 'Password'} is required`;
     if (field?.hasError('minlength')) return 'Password must be at least 6 characters';
     return '';
   }
 
   goToSignup(): void { this.router.navigate(['/auth/signup']); }
   goToForgotPassword(): void { this.router.navigate(['/auth/forgot-password']); }
-  goToHome(): void { this.router.navigate(['/auth/home']); }}
+  goToHome(): void { this.router.navigate(['/auth/home']); }
+}

@@ -6,7 +6,10 @@ export interface Product {
   price: number;
   category?: string;
   image?: string;
+  imageUrl?: string;
   productOrderIds?: number[];
+  active?: boolean;
+  stockQuantity?: number;
 }
 
 export interface CreateProductDTO {
@@ -23,8 +26,8 @@ export interface UpdateProductDTO {
   price: number;
 }
 
-export enum OrderStatus{
-     ORDERED = 'ORDERED',
+export enum OrderStatus {
+  ORDERED = 'ORDERED',
   DISPATCHED = 'DISPATCHED',
   DELIVERED = 'DELIVERED',
   CANCELLED = 'CANCELLED',
@@ -44,6 +47,9 @@ export interface Order {
   userId: number;
   productName: string;
   productId: number;
+  orderNumber?: string;
+  totalAmount?: number;
+  orderStatus2?: string;
 }
 
 export interface OrderItem {
@@ -71,4 +77,32 @@ export interface OrderLogDTO {
   deliveredOn: Date;
   productInventory: number;
   productOrderQuantity: number;
-} 
+}
+
+// Backend DS1 product shape
+export interface BackendProduct {
+  productId: number;
+  productName: string;
+  description?: string;
+  price: number;
+  stockQuantity: number;
+  category?: string;
+  imageUrl?: string;
+  active?: boolean;
+}
+
+// Backend DS2 order shape
+export interface BackendOrder {
+  orderId: number;
+  orderNumber: string;
+  userId: number;
+  username?: string;
+  productIds: number[];
+  quantities: number[];
+  totalAmount: number;
+  orderStatus: string;
+  shippingAddress?: string;
+  notes?: string;
+  orderDate: string;
+  deliveryDate?: string;
+}
