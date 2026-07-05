@@ -44,12 +44,12 @@ export class AuthService {
   login(credentials: LoginCredentials): Observable<User> {
     // The backend LoginRequest uses 'username' field (which accepts email/phone/username)
     const backendPayload = {
-      username: credentials.email,
+      username: credentials.username,
       password: credentials.password
     };
 
     return this.http.post<any>(`${this.AUTH_URL}/login`, backendPayload).pipe(
-      map(response => this.mapBackendResponseToUser(response, credentials.email)),
+      map(response => this.mapBackendResponseToUser(response, credentials.username)),
       tap(user => this.setSession(user, '')),
       catchError(error => {
         const message = error.error?.message || error.message || 'Invalid credentials';
@@ -61,13 +61,13 @@ export class AuthService {
   // Overload that also saves the raw token
   loginWithToken(credentials: LoginCredentials): Observable<{ user: User; token: string }> {
     const backendPayload = {
-      username: credentials.email,
+      username: credentials.username,
       password: credentials.password
     };
 
     return this.http.post<any>(`${this.AUTH_URL}/login`, backendPayload).pipe(
       map(response => ({
-        user: this.mapBackendResponseToUser(response, credentials.email),
+        user: this.mapBackendResponseToUser(response, credentials.username),
         token: response.token || response.jwt || ''
       })),
       tap(({ user, token }) => this.setSession(user, token)),
