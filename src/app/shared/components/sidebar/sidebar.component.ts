@@ -169,3 +169,4 @@ export class SidebarComponent implements OnInit , OnDestroy {
   console.log('Sidebar clicked');
 }
 }
+// Hey chat this component is not using any of the endpoints from the ProfileController . Need to add the endpoints to the service and the component as well. 

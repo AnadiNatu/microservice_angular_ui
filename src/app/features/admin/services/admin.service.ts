@@ -70,10 +70,7 @@ export class AdminService {
     private productService: ProductService
   ) {}
 
-  // ===========================================================================
   // MAPPERS
-  // ===========================================================================
-
   // Map raw backend ProductDto → frontend Product
   // Delegates to ProductService.mapProduct so there is one source of truth.
   private mapProduct(p: any): Product {
@@ -185,26 +182,6 @@ export class AdminService {
   }
 
   // POST /api/products
-  // createProduct(product: CreateProductDTO): Observable<Product> {
-  //   return this.http.post<any>(`${this.ADMIN_BASE}/products`, product).pipe(
-  //     map(p => this.mapProduct(p)),
-  //     catchError(() => {
-  //       const np: Product = {
-  //         productId: Date.now(), ...product,
-  //         description: product.description,
-  //         sku: product.sku,
-  //         stockQuantity: product.stockQuantity,
-  //         active: true,
-  //         image: '', createdByUsername: '', createdByUserId: 0,
-  //         createdOn: new Date(), updatedOn: new Date()
-  //       };
-  //       this.mockProducts.push(np);
-  //       return of(np);
-  //     })
-  //   );
-  // }
-
-  // POST /api/products
 createProduct(product: CreateProductDTO): Observable<Product> {
   return this.http.post<any>(`${this.ADMIN_BASE}/products`, product).pipe(
     map(p => this.mapProduct(p))
@@ -212,15 +189,6 @@ createProduct(product: CreateProductDTO): Observable<Product> {
     // Let the component's error handler show the real message to the admin.
   );
 }
-
-  // FIX: Old code called PUT /products/{product.productName} (name in path).
-  //      Backend controller is PUT /products/{productId} (ID in path).
-  // updateProduct(productId: number, product: Partial<UpdateProductDTO>): Observable<Product> {
-  //   return this.http.put<any>(`${this.ADMIN_BASE}/products/${productId}`, product).pipe(
-  //     map(p => this.mapProduct(p)),
-  //     catchError(() => of({} as Product))
-  //   );
-  // }
 
   // PUT /api/products/{productId}/deactivate
   deactivateProduct(productId: number): Observable<Product> {
@@ -287,9 +255,7 @@ updateProductImage(productId: number,file: File,oldImageUrl: string | null = nul
 deleteProductImage(productId: number): Observable<ImageDeleteResponse> 
 {return this.productService.deleteProductImage(productId);}
 
-  // ===========================================================================
   // ORDER OPERATIONS  — /api/orders  (DS2 via gateway)
-  // ===========================================================================
 
   // FIX: Old code only fetched PENDING orders from one status endpoint.
   //      Backend has no single "get-all" endpoint so we fan out across all
@@ -380,39 +346,7 @@ updateOrderStatus(orderId: number, status: string): Observable<Order> {
     return this.http.get<any>(`${this.ADMIN_BASE}/orders/stats`);
   }
 
-//   getOrderLogsByUsers(
-//   userName?: string
-// ): Observable<OrderLogDTO[]> {
 
-//   let params = new HttpParams();
-
-//   if (userName?.trim()) {
-//     params = params.set('userName', userName.trim());
-//   }
-
-//   return this.http.get<OrderLogDTO[]>(
-//     `${this.ADMIN_BASE}/orders/logs/users`,
-//     { params }
-//   );
-// }
-
-// getOrderLogsByProduct(
-//   productName: string
-// ): Observable<OrderLogDTO[]> {
-
-//   const params = new HttpParams()
-//     .set('productName', productName);
-
-//   return this.http.get<OrderLogDTO[]>(
-//     `${this.ADMIN_BASE}/orders/logs/product`,
-//     { params }
-//   );
-// }
-  // ===========================================================================
-  // USER OPERATIONS  — /api/users  (DS1 via gateway)
-  // ===========================================================================
-
-  // GET /api/users (paginated)
   getAllUsers(page = 0, size = 100): Observable<User[]> {
     return this.http.get<PageResponse<any>>(
       `${this.ADMIN_BASE}/users?page=${page}&size=${size}`
@@ -444,76 +378,9 @@ getOrderLogsByUsers(): Observable<OrderLogDTO[]> {
   );
 }
 
-  updateProduct(
-    productId: number,
-    product: Partial<UpdateProductDTO>
-): Observable<Product> {
-
-    return this.http.put<any>(
-        `${this.ADMIN_BASE}/products/${productId}`,
-        product
-    ).pipe(
-        map(p => this.mapProduct(p))
-    );
+  updateProduct(productId: number, product: Partial<UpdateProductDTO>): Observable<Product> {
+    return this.http.put<any>(`${this.ADMIN_BASE}/products/${productId}`,product).pipe(map(p => this.mapProduct(p)));
 }
-
-  // ===========================================================================
-  // ORDER LOGS  (derived — no dedicated backend endpoint)
-  // ===========================================================================
-
-  // Search orders where any item's productName matches the keyword
-  // FIX: Old version read o.productName (flat field). Items are now in items[].
-  // getOrderLogsByProduct(productName: string): Observable<OrderLogDTO[]> {
-  //   return this.getAllOrders().pipe(
-  //     map(orders => orders
-  //       .filter(o => o.items?.some(
-  //         i => String(i.productName).toLowerCase().includes(productName.toLowerCase())
-  //       ))
-  //       .map(o => {
-  //         const matched = o.items?.find(
-  //           i => String(i.productName).toLowerCase().includes(productName.toLowerCase())
-  //         );
-  //         return {
-  //           orderId:              o.orderId,
-  //           productName:          String(matched?.productName ?? productName),
-  //           userName:             o.username ?? 'Unknown',
-  //           orderQuantity:        matched?.quantity ?? 0,
-  //           orderPrice:           o.totalAmount ?? 0,
-  //           orderStatus:          o.orderStatus as any,
-  //           deliveredOn:          o.deliveryDate,
-  //           productInventory:     0,
-  //           productOrderQuantity: matched?.quantity ?? 0
-  //         } as OrderLogDTO;
-  //       })
-  //     )
-  //   );
-  // }
-
-  // All orders as log rows
-  // FIX: Old version read o.userName/o.orderQuantity — now derived from items[].
-  // getOrderLogsByUsers(): Observable<OrderLogDTO[]> {
-  //   return this.getAllOrders().pipe(
-  //     map(orders => orders.map(o => {
-  //       const totalQty = o.items?.reduce((s, i) => s + (i.quantity ?? 0), 0) ?? 0;
-  //       const firstName = o.items?.[0] ? String(o.items[0].productName) : `Order #${o.orderId}`;
-  //       return {
-  //         orderId:              o.orderId,
-  //         productName:          firstName,
-  //         userName:             o.username ?? 'Unknown',
-  //         orderQuantity:        totalQty,
-  //         orderPrice:           o.totalAmount ?? 0,
-  //         orderStatus:          o.orderStatus as any,
-  //         deliveredOn:          o.deliveryDate,
-  //         productInventory:     0,
-  //         productOrderQuantity: totalQty
-  //       } as OrderLogDTO;
-  //     }))
-  //   );
-  // }
-
-  // ===========================================================================
-  // ANALYTICS
-  // ===========================================================================
 
   getDashboardStats(): Observable<any> {
     return forkJoin({
@@ -543,4 +410,6 @@ getOrderLogsByUsers(): Observable<OrderLogDTO[]> {
       { month: 'May', revenue: 21000 }, { month: 'Jun', revenue: 25000 }
     ]);
   }
+  // Api missing nor not used 
+  // /user/{userId}/date-range {Get} (Takes userid , startDate , endDate , page and size , Responds with Page OrderDto)
 }
